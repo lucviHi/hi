@@ -157,14 +157,6 @@ Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.sea
 // ===================== STAFF ROUTES =====================
 Route::middleware(['auth:web'])->group(function () {
     Route::middleware('check.room')->group(function () {
-
-// Hiển thị dashboard phòng (hoặc chi tiết)
-// Route::get('/rooms/{room_id}', [RoomController::class, 'show'])->name('rooms.show');
-
-// // Hiển thị view show-live
-// Route::get('/rooms/{room_id}/show-live', [RoomController::class, 'show_live'])->name('rooms.dashboard');
-
-
         Route::resource('ads_manual_data_days', AdsManualDataDayController::class);
 
         Route::get('/import-ads-manual/{room_id}', action: [AdsManualDataDayController::class, 'index'])->name('ads_manual_data_days.index');

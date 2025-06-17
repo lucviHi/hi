@@ -61,6 +61,7 @@ class StreamerDataDayController extends Controller
             $header = array_shift($rows); // Dòng tiêu đề
 
             $expectedColumns = 23;
+            $datesToUpdate = []; // chứa các ngày xuất hiện trong file
 
             foreach ($rows as $row) {
                 if (count($row) !== $expectedColumns || empty($row[0]))
@@ -83,24 +84,9 @@ class StreamerDataDayController extends Controller
                 } catch (\Exception $e) {
                     continue;
                 }
-                // $existing = StreamerDataDay::where([
-                //     'room_id' => $room_id,
-                //     'live_name' => $row[0],
-                //     'start_time' => $start_time,
-                // ])->first();
+             
+                $datesToUpdate[$date] = true; // lưu lại ngày đang xử lý
 
-                // $oldData = null;
-                // if ($existing) {
-                //     $oldData = [
-                //         'gmv' => $existing->gmv ?? 0,
-                //         'paid_orders' => $existing->paid_orders ?? 0,
-                //         'views' => $existing->views ?? 0,
-                //         'product_clicks' => $existing->product_clicks ?? 0,
-                //         'live_impressions' => ($existing->gmv > 0 && $existing->gmv_per_1k_impressions > 0)
-                //             ? round($existing->gmv / $existing->gmv_per_1k_impressions * 1000)
-                //             : 0,
-                //     ];
-                // }
                 $existing = StreamerDataDay::where('room_id', $room_id)
                     ->where('live_name', $row[0])
                     ->where('start_time', $start_time)
@@ -161,6 +147,16 @@ class StreamerDataDayController extends Controller
 
                 );
             }
+// ✅ Gọi tổng hợp chỉ số sau khi import xong
+foreach (array_keys($datesToUpdate) as $dateToUpdate) {
+    \App\Services\LivePerformanceAggregator::updateStreamerSummary(
+        $room_id,
+        $dateToUpdate,
+        $type === 'hourly' ? $hour : null,
+        $type
+    );
+}
+
 
             return redirect()->route('live_performance.daily', $room_id)
                 ->with('success', 'Import dữ liệu thành công!');

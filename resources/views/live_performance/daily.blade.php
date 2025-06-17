@@ -2,15 +2,12 @@
 
 @section('content')
 <div class="container">
-    <!-- Nhập file theo ngày -->
+    <!-- Nhập file theo ngày --> 
+    <h2 class="mb-3">Quản lý Livestream - Theo Ngày</h2>
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Quản lý Livestream - Theo Ngày</h2>
-        <div class="d-flex align-items-center gap-3">
-            <label for="import_date" class="form-label mb-0 me-2">Ngày import:</label>
-            {{-- <input type="date" id="import_date" name="import_date" class="form-control" value="{{ date('Y-m-d') }}" required> --}}
-
+        <div class="d-flex gap-4 align-items-end" style="max-width: 980px;">
             <!-- Import Streamer -->
-            <form action="{{ route('streamer_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('streamer_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="d-flex flex-column justify-content-between" >
                 @csrf
                 <input type="hidden" name="type" value="daily">
                 <div class="mb-3">
@@ -21,7 +18,7 @@
             </form>
 
             <!-- Import GMV Auto -->
-            <form action="{{ route('ads_auto_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('ads_auto_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="d-flex flex-column justify-content-between" >
                 @csrf
                 <input type="hidden" name="type" value="daily">
 
@@ -36,7 +33,7 @@
             </form>
 
             <!-- Import Ads Manual -->
-            <form action="{{ route('ads_manual_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('ads_manual_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="d-flex flex-column justify-content-between" >
                 @csrf
                 <input type="hidden" name="type" value="daily">
                 <div class="mb-3">
@@ -71,6 +68,7 @@
                     <th>% Chi phí QC/ GMV</th>
                     <th>Hiển thị</th>
                     <th>Lượt xem</th>
+                    <th>Lượt Click sản phẩm</th>
                     <th>Sản phẩm bán</th>
                     <th>Vào phòng</th>
                     <th>CTR</th>
@@ -83,6 +81,7 @@
                     $totalCost = 0;
                     $totalItems = 0;
                     $totalImpressions = 0;
+                    $totalClicks = 0;
                     $totalViews = 0;
                     $totalProductClicks = 0;
                     $totalPaidOrders = 0;
@@ -97,6 +96,7 @@
                         <td>{{ $data->roas_total > 0 ? round($data->ads_total_cost*100 / $data->gmv, 2) : '-'  }}</td>
                         <td>{{ $data->live_impressions }}</td>
                         <td>{{ $data->views }}</td>
+                        <td>{{ $data->product_clicks }}</td>
                         <td>{{ $data->items_sold }}</td>
                         <td>{{ $data->entry_rate ? round($data->entry_rate * 100, 2) . '%' : '-' }}</td>
                         <td>{{ $data->ctr ? round($data->ctr * 100, 2) . '%' : '-' }}</td>
@@ -106,10 +106,11 @@
                         $totalGMV += $data->gmv;
                         $totalCost += $data->ads_total_cost;
                         $totalItems += $data->items_sold;
+                        $totalClicks += $data->product_clicks;
                         $totalImpressions +=$data->live_impressions;
                         $totalViews += $data->views;
-                        $totalProductClicks += $data->product_clicks ?? 0;
-                        $totalPaidOrders += $data->items_sold ?? 0; // paid_orders bên streamer là items_sold trong bảng tổng
+                        $totalProductClicks += $data->product_clicks;
+                        $totalPaidOrders += $data->items_sold; // paid_orders bên streamer là items_sold trong bảng tổng
                     @endphp
                 @endforeach
 
@@ -121,6 +122,7 @@
                     <td>{{ $totalGMV > 0 ? round($totalCost*100 / $totalGMV, 2) : '-' }}</td>
                     <td>{{ $totalImpressions }}</td>
                     <td>{{ $totalViews }}</td>
+                    <td>{{ $totalClicks }}</td>
                     <td>{{ $totalItems }}</td>
                     <td>
                         {{ $totalImpressions > 0 ? round(($totalViews / $totalImpressions) * 100, 2) . '%' : '-' }}

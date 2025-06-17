@@ -55,90 +55,7 @@ class AdsManualDataDayController extends Controller
     {   $data = AdsManualDataDay::with(relations: 'room')->get(); 
         return view('ads_manual_data_days.import_index', compact('room_id')); // Trả về view hiển thị danh sách
     }
-// public function import(Request $request, $room_id)
-// {
-//     $request->validate([
-//         'file' => 'required|mimes:xlsx|max:2048',
-//     ]);
 
-//     $file = $request->file('file');
-
-//     if ($xlsx = SimpleXLSX::parse($file->getPathname())) {
-//         $rows = $xlsx->rows();
-//         $header = array_shift($rows); // Lấy header để kiểm tra số cột
-
-//         // Kiểm tra số lượng cột
-//         $expectedColumns = 27;
-
-      
-//         foreach ($rows as $row) {
-//             // Kiểm tra nếu số cột không đúng thì báo lỗi
-//             if (count($row) !== $expectedColumns) {
-//                 return redirect()->route('ads_manual_data_days.index', $room_id)
-//                     ->with('error', 'File không đúng định dạng hoặc số cột không hợp lệ.');
-//             }
-           
-//             // Nếu dòng trống thì bỏ qua
-//             if (empty($row[0])) {
-//                 continue;
-//             }
-
-//             // Chuyển đổi ngày nếu có dữ liệu
-//             try {
-//                 $date = Carbon::createFromFormat('Y-m-d', trim($row[0]))->format('Y-m-d');
-//             } catch (\Exception $e) {
-//                 continue; // Nếu lỗi thì bỏ qua dòng này
-//             }
-
-//             // Chuẩn bị dữ liệu để lưu
-//             $data = [
-//                 'cost_usd' => $row[1] ?? 0,
-//                 'cost_local' => $row[2] ?? 0,
-//                 'cpc_usd' => $row[3] ?? 0,
-//                 'cpa_usd' => $row[4] ?? 0,
-//                 'total_purchases' => $row[5] ?? 0,
-//                 'cost_per_payment' => $row[6] ?? 0,
-//                 'impressions' => $row[7] ?? 0,
-//                 'ctr' => $row[8] ?? 0,
-//                 'cpm' => $row[9] ?? 0,
-//                 'cpc' => $row[10] ?? 0,
-//                 'clicks' => $row[11] ?? 0,
-//                 'conversions' => $row[12] ?? 0,
-//                 'cvr' => $row[13] ?? 0,
-//                 'cpa' => $row[14] ?? 0,
-//                 'roas_purchase' => $row[15] ?? 0,
-//                 'roas_payment' => $row[16] ?? 0,
-//                 'roas_on_site' => $row[17] ?? 0,
-//                 'shopping_purchases' => $row[18] ?? 0,
-//                 'purchase_count' => $row[19] ?? 0,
-//                 'cost_per_purchase' => $row[20] ?? 0,
-//                 'cost_per_shopping_purchase' => $row[21] ?? 0,
-//                 'total_payments' => $row[22] ?? 0,
-//                 'cost_per_payment_repeat' => $row[23] ?? 0,
-//                 'video_views' => $row[24] ?? 0,
-//                 'video_views_2s' => $row[25] ?? 0,
-//                 'video_views_6s' => $row[26] ?? 0,
-//             ];
-
-//             // Kiểm tra xem dữ liệu đã tồn tại chưa
-//             $existingData = AdsManualDataDay::where('room_id', $room_id)
-//                 ->where('date', $date)
-//                 ->first();
-
-//             if ($existingData) {
-//                 // Nếu có thì update
-//                 $existingData->update($data);
-//             } else {
-//                 // Nếu chưa có thì tạo mới
-//                 AdsManualDataDay::create(array_merge(['room_id' => $room_id, 'date' => $date], $data));
-//             }
-//         }
-
-//         return redirect()->route('ads_manual_data_days.index', $room_id)->with('success', 'Import dữ liệu thành công!');
-//     } else {
-//         return redirect()->route('ads_manual_data_days.index', $room_id)->with('error', 'Lỗi khi đọc file Excel.');
-//     }
-// }
 public function import(Request $request, $room_id)
 {
     $request->validate([
@@ -164,7 +81,9 @@ public function import(Request $request, $room_id)
                 continue;
             }
 
-            $hour = $type === 'hourly' ? $date->format('H:00:00') : null;
+            //$hour = $type === 'hourly' ? $date->format('H:00:00') : null;
+           $hour = $type === 'hourly' ? intval($request->input('hour')) : null;
+
             $dateOnly = $date->toDateString();
             $impressions = $row[7] ?? 0;
             $cpm = $row[9] ?? 0;
@@ -203,7 +122,7 @@ public function import(Request $request, $room_id)
                 'type' => $type,
                 'hour' => $hour,
             ];
-
+dd($data);
             AdsManualDataDay::updateOrCreate(
                 [
                     'room_id' => $room_id,
