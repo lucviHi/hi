@@ -36,4 +36,5 @@
       </main>
       <!--end::App Main-->
       @yield('scripts')
+      
 @include('layouts._footer')

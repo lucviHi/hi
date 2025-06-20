@@ -3,6 +3,8 @@
 @section('content')
 <div class="container">
     <!-- Nhập file theo khung giờ -->
+    
+<h2 class="mb-3">Quản lý Livestream - Theo giờ</h2>
    <!-- Hàng trên: chọn giờ dùng chung -->
 <div class="row mb-3 align-items-end">
     <div class="col-md-3">
@@ -16,12 +18,11 @@
         </select>
     </div>
 </div>
-
 <!-- Hàng dưới: 3 form nằm ngang -->
-<div class="row">
+<div class="d-flex gap-4 align-items-end" style="max-width: 980px;">
     <!-- Streamer -->
     <div class="col-md-4">
-        <form action="{{ route('streamer_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="import-form">
+        <form action="{{ route('streamer_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="import-form d-flex flex-column justify-content-between">
             @csrf
             <input type="hidden" name="type" value="hourly">
             <input type="hidden" name="hour" class="form-hour">
@@ -34,7 +35,7 @@
 
     <!-- GMV Auto -->
     <div class="col-md-4">
-        <form action="{{ route('ads_auto_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="import-form">
+        <form action="{{ route('ads_auto_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="import-form d-flex flex-column justify-content-between">
             @csrf
             <input type="hidden" name="type" value="hourly">
             <input type="hidden" name="hour" class="form-hour">
@@ -48,9 +49,9 @@
         </form>
     </div>
 
-    <!-- Ads Manual -->
+    <!-- Ads Manual --> 
     <div class="col-md-4">
-        <form action="{{ route('ads_manual_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="import-form">
+        <form action="{{ route('ads_manual_data_days.import', ['room_id' => $room_id]) }}" method="POST" enctype="multipart/form-data" class="import-form d-flex flex-column justify-content-between">
             @csrf
             <input type="hidden" name="type" value="hourly">
             <input type="hidden" name="hour" class="form-hour">
@@ -60,6 +61,8 @@
             <button type="submit" class="btn btn-primary w-100">Import</button>
         </form>
     </div>
+    <a class="btn btn-outline-primary "href=" {{route ('live_performance.hourly_delta',['room_id' => $room_id])}}">Sang trang Snap</a>
+
 </div>
 
     <hr class="my-4">
@@ -107,10 +110,13 @@
                     <th>Giờ</th>
                     <th>GMV</th>
                     <th>Chi Phí QC</th>
-                    <th>ROAS</th>
+                    <th>Chi Phí Ads thủ công</th>
+                    <th>Chi Phí Ads tự động</th>
+                    <th>ROI</th>
                     <th>% Chi phí QC/ GMV</th>
                     <th>Hiển thị</th>
                     <th>Lượt xem</th>
+                    <th>Lượt Click sản phẩm</th>
                     <th>Sản phẩm bán</th>
                     <th>Vào phòng</th>
                     <th>CTR</th>
@@ -121,11 +127,14 @@
                 @php
                     $totalGMV = 0;
                     $totalCost = 0;
+                    $totalManualCost = 0;
+                    $totalAutoCost = 0;
                     $totalItems = 0;
                     $totalViews = 0;
                     $totalImpressions = 0;
                     $totalProductClicks = 0;
                     $totalPaidOrders = 0;
+                    $totalClicks = 0;
                 @endphp
 
                 @foreach ($hourlyData as $data)
@@ -133,21 +142,28 @@
                         <td>{{ $data->hour }}</td>
                         <td>{{ number_format($data->gmv) }}</td>
                         <td>{{ number_format($data->ads_total_cost) }}</td>
-                        <td>{{ $data->roas_total > 0 ? round($data->gmv/ $data->ads_total_cost, 2) : '-'  }}</td>
-                        <td>{{ $data->roas_total > 0 ? round($data->ads_total_cost*100 / $data->gmv, 2) : '-'  }}</td>
-                        <td>{{ $data->live_impressions }}</td>
-                        <td>{{ $data->views }}</td>
-                        <td>{{ $data->items_sold }}</td>
-                        <td>{{ $data->entry_rate ? round($data->entry_rate * 100, 2) . '%' : '-' }}</td>
-                        <td>{{ $data->ctr ? round($data->ctr * 100, 2) . '%' : '-' }}</td>
-                        <td>{{ $data->ctor ? round($data->ctor * 100, 2) . '%' : '-' }}</td>
+                        <td>{{ number_format($data->ads_manual_cost) }}</td>
+                        <td>{{ number_format($data->ads_auto_cost) }}</td>
+                        <td>{{ $data->ads_total_cost > 0 ? round($data->gmv/ $data->ads_total_cost, 2) : '-'  }}</td>
+                        <td>{{ $data->gmv > 0 ? round(($data->ads_total_cost*100 / $data->gmv), 2). '%' : '-'  }}</td>
+                        <td>{{ number_format($data->live_impressions) }}</td>
+                        <td>{{ number_format($data->views) }}</td>
+                        <td>{{ number_format($data->product_clicks) }}</td>
+                        <td>{{ number_format($data->items_sold) }}</td>
+                        <td>{{ $data->live_impressions > 0? round($data->views/ $data->live_impressions*100, 2) . '%' : '-' }}</td>
+                        <td>{{ $data->views > 0 ? round($data->product_clicks/$data->views * 100, 2) . '%' : '-' }}</td>
+                        <td>{{ $data->product_clicks > 0 ? round($data->items_sold/ $data->product_clicks * 100, 2) . '%' : '-' }}</td>
                     </tr>
                     @php
                         $totalGMV += $data->gmv;
                         $totalCost += $data->ads_total_cost;
+                        $totalManualCost += $data->ads_manual_cost;
+                        $totalAutoCost += $data->ads_auto_cost;
                         $totalViews += $data->views;
+                        $totalClicks += $data->product_clicks;
                         $totalImpressions += $data->live_impressions;
                         $totalProductClicks += $data->product_clicks ?? 0;
+                        $totalItems += $data->items_sold;
                         $totalPaidOrders += $data->items_sold ?? 0; // paid_orders bên streamer là items_sold trong bảng tổng
                     @endphp
                 @endforeach
@@ -156,11 +172,14 @@
                     <td>Tổng</td>
                     <td>{{ number_format($totalGMV) }}</td>
                     <td>{{ number_format($totalCost) }}</td>
-                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) : '-' }}</td>
-                    <td>{{ $totalGMV  > 0 ? round($totalCost *100 / $totalGMV, 2) : '-' }}</td>
-                    <td>{{ $totalImpressions }}</td>
-                    <td>{{ $totalViews }}</td>
-                    <td>{{ $totalItems }}</td>
+                    <td>{{ number_format($totalManualCost) }}</td>
+                    <td>{{ number_format($totalAutoCost) }}</td>
+                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) . '%' : '-' }}</td>
+                    <td>{{ $totalGMV  > 0 ? round($totalCost *100 / $totalGMV, 2) . '%' : '-' }}</td>
+                    <td>{{ number_format($totalImpressions) }}</td>
+                    <td>{{ number_format($totalViews) }}</td>
+                    <td>{{ number_format($totalClicks) }}</td>
+                    <td>{{ number_format($totalItems) }}</td>
                     <td>
                         {{ $totalImpressions > 0 ? round(($totalViews / $totalImpressions) * 100, 2) . '%' : '-' }}
                     </td>

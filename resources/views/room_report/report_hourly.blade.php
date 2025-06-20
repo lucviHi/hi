@@ -2,65 +2,94 @@
 
 @section('content')
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Quản lý Livestream</h2>
-        <div class="d-flex align-items-center gap-3" style="position: sticky; top: 0; z-index: 1000;">
-            <label for="livestream_date" class="me-2 fw-bold text-nowrap">Chọn ngày:</label>
-            <input type="date" name="date" class="form-control" required value="{{ \Carbon\Carbon::today()->toDateString() }}">
-            <div class="d-flex gap-2">
-                <form action="" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-3">
-                        <label class="form-label">Chọn file Excel</label>
-                        <input type="file" name="file" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Import</button>
-                </form>
-                <form action="" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-3">
-                        <label class="form-label">Chọn file Excel</label>
-                        <input type="file" name="file" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Import</button>
-                </form>
-                <form action="" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-3">
-                        <label class="form-label">Chọn file Excel</label>
-                        <input type="file" name="file" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Import</button>
-                </form>
-            </div>
+    <h2 class="mb-4">Chênh Lệch Theo Giờ (So sánh Snapshot Hiện Tại - Trước Đó)</h2>
+
+    <!-- Bộ lọc ngày và giờ -->
+    <form method="GET" class="d-flex align-items-center gap-3 mb-3">
+        <label class="form-label mb-0">Ngày:</label>
+        <input type="date" name="date" class="form-control" value="{{ $date }}">
+
+        <div class="d-flex gap-2 align-items-center">
+            <label class="form-label mb-0">Từ:</label>
+            <input type="number" name="hour_from" class="form-control" min="0" max="23" value="{{ $hourFrom }}" style="width: 100px;">
+
+            <label class="form-label mb-0">-đến:</label>
+            <input type="number" name="hour_to" class="form-control" min="0" max="23" value="{{ $hourTo }}" style="width: 100px;">
         </div>
-    </div>
-    
-    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-        <table class="table table-bordered">
-            <thead>
+
+        <button class="btn btn-outline-primary">Lọc</button>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle">
+            <thead class="table-light">
                 <tr>
-                    <th>Chọn</th>
-                    <th>Khung Giờ</th>
+                    <th>Giờ</th>
                     <th>GMV</th>
-                    <th>Chi Phí Quảng Cáo</th>
-                    <th>ROAS</th>
-                    <th>Đơn Hàng</th>
+                    <th>Mục tiêu / giờ</th>
+                    <th>% đạt</th>
+                    <th>Chi Phí QC</th>
+                    <th>Ads Thủ Công</th>
+                    <th>Ads Tự Động</th>
                     <th>Hiển Thị</th>
+                    <th>Lượt Xem</th>
+                    <th>Click SP</th>
+                    <th>Bán</th>
+                    <th>Vào Phòng</th>
+                    <th>CTR</th>
+                    <th>CTOR</th>
                 </tr>
             </thead>
             <tbody>
-                @for ($i = 0; $i < 24; $i++)
+                @foreach ($differences as $row)
                 <tr>
-                    <td><input type="radio" name="selected_hour" value="{{ $i }}" class="form-check-input"></td>
-                    <td>{{ $i }}:00 - {{ $i+1 }}:00</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
+                    <td>{{ str_pad($row->hour, 2, '0', STR_PAD_LEFT) }}:00</td>
+                    <td>{{ number_format($row->gmv) }}</td>
+                    <td>{{ number_format($row->target_gmv) }}</td>
+                    <td>{{ $row->percent_achieved !== null ? $row->percent_achieved . '%' : '-' }}</td>
+                    <td>{{ number_format($row->ads_total_cost) }}</td>
+                    <td>{{ number_format($row->ads_manual_cost) }}</td>
+                    <td>{{ number_format($row->ads_auto_cost) }}</td>
+                    <td>{{ number_format($row->live_impressions) }}</td>
+                    <td>{{ number_format($row->views) }}</td>
+                    <td>{{ number_format($row->product_clicks) }}</td>
+                    <td>{{ number_format($row->items_sold) }}</td>
+                    <td>{{ round($row->entry_rate, 2) . '%'}}</td>
+                    <td>{{ round($row->ctr, 2) . '%' }}</td>
+                    <td>{{ round($row->ctor, 2) . '%'}}</td>
                 </tr>
-                @endfor
+                @endforeach
+                <tr class="fw-bold bg-light">
+   <tr class="fw-bold bg-light">
+    <td>Tổng</td>
+    <td>{{ number_format($differences->sum('gmv')) }}</td>
+    <td>{{ number_format($differences->count() * $targetPerHour) }}</td>
+    <td>
+        @php
+            $percentAchieved = $targetPerHour > 0 ? round($differences->sum('gmv') / ($differences->count() * $targetPerHour) * 100, 2) : null;
+        @endphp
+        {{ $percentAchieved !== null ? $percentAchieved . '%' : '-' }}
+    </td>
+    <td>{{ number_format($differences->sum('ads_total_cost')) }}</td>
+    <td>{{ number_format($differences->sum('ads_manual_cost')) }}</td>
+    <td>{{ number_format($differences->sum('ads_auto_cost')) }}</td>
+    <td>{{ number_format($differences->sum('live_impressions')) }}</td>
+    <td>{{ number_format($differences->sum('views')) }}</td>
+    <td>{{ number_format($differences->sum('product_clicks')) }}</td>
+    <td>{{ number_format($differences->sum('items_sold')) }}</td>
+    <td>
+      ---
+    </td>
+    <td>
+       --
+    </td>
+    <td>
+        -
+    </td>
+</tr>
+
+</tr>
+
             </tbody>
         </table>
     </div>

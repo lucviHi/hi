@@ -53,7 +53,8 @@ class StreamerDataDayController extends Controller
         $file = $request->file('file');
         $type = $request->input('type');
         $hour = $type === 'hourly' ? $request->input('hour') : null;
-
+        $route = $type === 'hourly' ? 'live_performance.hourly' : 'live_performance.daily';
+        
         if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) {
             $rows = $xlsx->rows();
             array_shift($rows); // Xóa dòng ngày
@@ -64,11 +65,17 @@ class StreamerDataDayController extends Controller
             $datesToUpdate = []; // chứa các ngày xuất hiện trong file
 
             foreach ($rows as $row) {
+        
                 if (count($row) !== $expectedColumns || empty($row[0]))
                     continue;
 
                 try {
                     $start_time = Carbon::createFromFormat('Y-m-d H:i', trim($row[1]));
+                    if ($type === 'hourly') {
+                   $start_date = $start_time->toDateString();
+                   $today = Carbon::today()->toDateString();
+                   if ($start_date !== $today) continue;
+                      }
                     $date = $start_time->format('Y-m-d');
                     $gmv = (int) str_replace(['₫', '.', ','], '', $row[4]);
                     $total_revenue = (int) str_replace(['₫', '.', ','], '', $row[3]);
@@ -108,7 +115,9 @@ class StreamerDataDayController extends Controller
                     'room_id' => $room_id,
                     'live_name' => $row[0],
                     'start_time' => $start_time,
-                ], [
+                    'hour' => $type === 'hourly' ? intval($hour) : null,
+
+                    'type' => $type,
                     'duration' => abs((int) $row[2]),
                     'total_revenue' => $total_revenue,
                     'gmv' => $gmv,
@@ -133,19 +142,19 @@ class StreamerDataDayController extends Controller
                 ]);
 
                 // Gọi cập nhật bảng tổng
-                \App\Services\LivePerformanceAggregator::updateFromStreamer(
-                    $room_id,
-                    $date,
-                    $hour,
-                    $type,
-                    $gmv,
-                    $paid_orders,
-                    $views,
-                    $gmv_per_1k_impressions,
-                    $product_clicks,
-                    $oldData // truyền vào đây
+                // \App\Services\LivePerformanceAggregator::updateFromStreamer(
+                //     $room_id,
+                //     $date,
+                //     $hour,
+                //     $type,
+                //     $gmv,
+                //     $paid_orders,
+                //     $views,
+                //     $gmv_per_1k_impressions,
+                //     $product_clicks,
+                //     $oldData // truyền vào đây
 
-                );
+                // );
             }
 // ✅ Gọi tổng hợp chỉ số sau khi import xong
 foreach (array_keys($datesToUpdate) as $dateToUpdate) {
@@ -158,11 +167,11 @@ foreach (array_keys($datesToUpdate) as $dateToUpdate) {
 }
 
 
-            return redirect()->route('live_performance.daily', $room_id)
+            return redirect()->route($route, $room_id)
                 ->with('success', 'Import dữ liệu thành công!');
         }
 
-        return redirect()->route('live_performance.daily', $room_id)
+        return redirect()->route( $route, $room_id)
             ->with('error', 'Lỗi khi đọc file Excel.');
     }
 

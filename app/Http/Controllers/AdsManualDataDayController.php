@@ -57,13 +57,15 @@ class AdsManualDataDayController extends Controller
     }
 
 public function import(Request $request, $room_id)
-{
+{  
+
     $request->validate([
         'file' => 'required|mimes:xlsx|max:2048',
     ]);
 
     $file = $request->file('file');
     $type = $request->input('type', 'daily'); // Mặc định daily
+    $route = $type === 'hourly' ? 'live_performance.hourly' : 'live_performance.daily';
 
     if ($xlsx = SimpleXLSX::parse($file->getPathname())) {
         $rows = $xlsx->rows();
@@ -122,7 +124,7 @@ public function import(Request $request, $room_id)
                 'type' => $type,
                 'hour' => $hour,
             ];
-dd($data);
+
             AdsManualDataDay::updateOrCreate(
                 [
                     'room_id' => $room_id,
@@ -145,10 +147,10 @@ dd($data);
             );
         }
 
-        return redirect()->route('live_performance.daily', $room_id)
+        return redirect()->route($route, $room_id)
                          ->with('success', 'Import dữ liệu thành công!');
     } else {
-        return redirect()->route('live_performance.daily', $room_id)
+        return redirect()->route($route, $room_id)
                          ->with('error', 'Lỗi khi đọc file Excel.');
     }
 }

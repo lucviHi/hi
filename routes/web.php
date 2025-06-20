@@ -49,6 +49,33 @@ Route::prefix('live_performance')->group(function () {
     Route::get('daily/{room_id}', [LivePerformanceDayController::class, 'daily'])->name('live_performance.daily');
     Route::get('hourly/{room_id}', [LivePerformanceDayController::class, 'hourly'])->name('live_performance.hourly');
 });
+Route::resource('live_days', LiveDayController::class);
+Route::get('/rooms/{room_id}/performance/hourly-delta', [LivePerformanceDayController::class, 'compareHourly'])->name('live_performance.hourly_delta');
+
+
+
+Route::get('/live_days', [LiveDayController::class, 'index'])->name('live_days.index');
+Route::get('/live_days/create', [LiveDayController::class, 'create'])->name('live_days.create');
+Route::post('/live_days', [LiveDayController::class, 'store'])->name('live_days.store');
+Route::get('/live_days/{live_date}/edit', [LiveDayController::class, 'edit'])->name('live_days.edit');
+Route::put('/live_days/{live_date}', [LiveDayController::class, 'update'])->name('live_days.update');
+Route::delete('/live_days/{live_date}', [LiveDayController::class, 'destroy'])->name('live_days.destroy');
+Route::post('/live_days/generate', [LiveDayController::class, 'generateDays'])->name('live_days.generate');
+    //Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
+    // Route::post('/live_days/generate', [LiveDayController::class, 'generateDays'])->name('live_days.generate');
+    // Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.search');
+
+use App\Http\Controllers\LiveTargetDayController;
+
+Route::get('live_target_days/{room_id}', [LiveTargetDayController::class, 'index'])->name('live_target_days.index');
+Route::get('live_target_days/{room_id}/create', [LiveTargetDayController::class, 'create'])->name('live_target_days.create');
+Route::post('live_target_days/{room_id}', [LiveTargetDayController::class, 'store'])->name('live_target_days.store');
+Route::get('live_target_days/{room_id}/{date}/edit', [LiveTargetDayController::class, 'edit'])->name('live_target_days.edit');
+Route::put('live_target_days/{room_id}/{date}', [LiveTargetDayController::class, 'update'])->name('live_target_days.update');
+Route::delete('live_target_days/{room_id}/{date}', [LiveTargetDayController::class, 'destroy'])->name('live_target_days.destroy');
+Route::post('/live_target_days/generate/{room_id}', [LiveTargetDayController::class, 'generate'])->name('live_target_days.generate');
+Route::put('rooms/live_target_days/bulk-update/{room_id}', [LiveTargetDayController::class, 'bulkUpdate'])->name('live_target_days.bulk_update');
+
 // ===================== ADMIN ROUTES =====================
 Route::middleware('auth:admin')->group(function () {
     Route::get('/dashboard', fn() => view('admin.dashboard'))->name('admin.dashboard');
@@ -61,14 +88,12 @@ Route::middleware('auth:admin')->group(function () {
         'roles' => RoleController::class,
         'staffs' => StaffController::class,
         'staff_roles' => StaffRoleController::class,
-        'live_days' => LiveDayController::class,
-        'live_performance' => LivePerformanceDayController::class
+        //'live_days' => LiveDayController::class,
+       // 'live_performance' => LivePerformanceDayController::class
     ]);
 
     
-    //Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
-    Route::post('/live_days/generate', [LiveDayController::class, 'generateDays'])->name('live_days.generate');
-    Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.search');
+
 
     // Các route liên quan đến room_id
 
@@ -91,6 +116,7 @@ Route::get('/rooms/{room}/staff_roles/{staffRole}/edit', [StaffRoleController::c
 Route::put('/rooms/{room}/staff_roles/{staffRole}', [StaffRoleController::class, 'update'])->name('staff_roles.update');
 
 Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.search');
+//snaps
 
 
 
@@ -150,7 +176,12 @@ Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.sea
     Route::post('streamer_data_days/{room_id}/restore', [StreamerDataDayController::class, 'restore'])->name('streamer_data_days.restore');
     Route::delete('streamer_data_days/{room_id}/force-delete', [StreamerDataDayController::class, 'forceDelete'])->name('streamer_data_days.forceDelete');
 
-   
+   //orders
+   Route::prefix('projects/affiliate-orders')->group(function () {
+    Route::get('/{project_id}', [\App\Http\Controllers\AffiliateOrderController::class, 'index'])->name('affiliate_orders.index');
+    Route::post('/{project_id}/import', [\App\Http\Controllers\AffiliateOrderController::class, 'import'])->name('affiliate_orders.import');
+});
+
 });
 
 

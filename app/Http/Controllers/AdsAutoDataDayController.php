@@ -45,15 +45,18 @@ class AdsAutoDataDayController extends Controller
         ]);
     
         $file = $request->file('file');
-        $date = $request->input('date');
+        $date = $request->input('date'); 
         $type = $request->input('type');
         //$hour = $type === 'hourly' ? $request->input('hour') : null;
         $hour = $type === 'hourly' ? intval($request->input('hour')) : null;
+        $route = $type === 'hourly' ? 'live_performance.hourly' : 'live_performance.daily';
+
+        
 
         if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) {
-            $rows = $xlsx->rows();
+            $rows = $xlsx->rows(); 
             array_shift($rows); // Bỏ header
-    
+
             $expectedColumns = 18;
     
             // Tổng
@@ -61,7 +64,7 @@ class AdsAutoDataDayController extends Controller
             $count = 0;
     
             foreach ($rows as $row) {
-                if (count($row) !== $expectedColumns || empty($row[2])) continue;
+                if (count($row) > $expectedColumns || empty($row[2])) continue;
     
                 // Ghi từng chiến dịch
                 \App\Models\AdsAutoDay::updateOrCreate([
@@ -73,31 +76,31 @@ class AdsAutoDataDayController extends Controller
                 ], [
                     'campaign_name' => $row[1],
                     'cost' => $row[2] ?? 0,
-                    'net_cost' => $row[3] ?? 0,
-                    'sku_orders' => $row[4] ?? 0,
-                    'cost_per_order' => $row[5] ?? 0,
-                    'gross_revenue' => $row[6] ?? 0,
-                    'roi' => $row[7] ?? 0,
-                    'live_views' => $row[8] ?? 0,
-                    'cost_per_view' => $row[9] ?? 0,
-                    'ten_sec_views' => $row[10] ?? 0,
-                    'cost_per_ten_sec_view' => $row[11] ?? 0,
-                    'followers' => $row[12] ?? 0,
-                    'store_orders' => $row[13] ?? 0,
-                    'cost_per_store_order' => $row[14] ?? 0,
-                    'gross_revenue_store' => $row[15] ?? 0,
-                    'roi_store' => $row[16] ?? 0,
-                    'currency' => $row[17] ?? 'VND',
+                    // 'net_cost' => $row[3] ?? 0,
+                    // 'sku_orders' => $row[4] ?? 0,
+                    // 'cost_per_order' => $row[5] ?? 0,
+                    // 'gross_revenue' => $row[6] ?? 0,
+                    // 'roi' => $row[7] ?? 0,
+                    // 'live_views' => $row[8] ?? 0,
+                    // 'cost_per_view' => $row[9] ?? 0,
+                    // 'ten_sec_views' => $row[10] ?? 0,
+                    // 'cost_per_ten_sec_view' => $row[11] ?? 0,
+                    // 'followers' => $row[12] ?? 0,
+                    // 'store_orders' => $row[13] ?? 0,
+                    // 'cost_per_store_order' => $row[14] ?? 0,
+                    // 'gross_revenue_store' => $row[15] ?? 0,
+                    // 'roi_store' => $row[16] ?? 0,
+                    // 'currency' => $row[17] ?? 'VND',
                 ]);
 
                 // Cộng tổng
                 $cost += (int) $row[2] ?? 0;
-                $grossRevenue += (int) $row[6] ?? 0;
-                $roiSum += (float) $row[7] ?? 0;
+                // $grossRevenue += (int) $row[6] ?? 0;
+                // $roiSum += (float) $row[7] ?? 0;
                 $count++;
             }
-    
-            $roiAvg = $cost > 0 ? round($grossRevenue / $cost, 2) : 0;
+  
+            //$roiAvg = $cost > 0 ? round($grossRevenue / $cost, 2) : 0;
             // Gọi cập nhật tổng hợp
             \App\Services\LivePerformanceAggregator::updateFromAuto(
                 $room_id,
@@ -105,15 +108,15 @@ class AdsAutoDataDayController extends Controller
                 $hour,
                 $type,
                 $cost,
-                $grossRevenue,
-                $roiAvg
+                // $grossRevenue,
+                // $roiAvg
             );
-    
-            return redirect()->route('live_performance.daily', $room_id)
+            
+            return redirect()->route($route, $room_id)
                              ->with('success', 'Import dữ liệu Ads Auto thành công!');
         }
     
-        return redirect()->route('live_performance.daily', $room_id)
+        return redirect()->route($route, $room_id)
                          ->with('error', 'Không thể đọc file Excel.');
     }
     

@@ -64,7 +64,9 @@
                     <th>Ngày</th>
                     <th>GMV</th>
                     <th>Chi Phí QC</th>
-                    <th>ROAS</th>
+                    <th>Chi Phí Ads thủ công</th>
+                    <th>Chi Phí Ads tự động</th>
+                    <th>ROI</th>
                     <th>% Chi phí QC/ GMV</th>
                     <th>Hiển thị</th>
                     <th>Lượt xem</th>
@@ -79,6 +81,8 @@
                 @php
                     $totalGMV = 0;
                     $totalCost = 0;
+                    $totalManualCost = 0;
+                    $totalAutoCost = 0;
                     $totalItems = 0;
                     $totalImpressions = 0;
                     $totalClicks = 0;
@@ -92,19 +96,23 @@
                         <td>{{ \Carbon\Carbon::parse($data->date)->format('d/m/Y') }}</td>
                         <td>{{ number_format($data->gmv) }}</td>
                         <td>{{ number_format($data->ads_total_cost) }}</td>
-                        <td>{{ $data->roas_total > 0 ? round($data->gmv/ $data->ads_total_cost, 2) : '-'  }}</td>
-                        <td>{{ $data->roas_total > 0 ? round($data->ads_total_cost*100 / $data->gmv, 2) : '-'  }}</td>
-                        <td>{{ $data->live_impressions }}</td>
-                        <td>{{ $data->views }}</td>
-                        <td>{{ $data->product_clicks }}</td>
-                        <td>{{ $data->items_sold }}</td>
-                        <td>{{ $data->entry_rate ? round($data->entry_rate * 100, 2) . '%' : '-' }}</td>
-                        <td>{{ $data->ctr ? round($data->ctr * 100, 2) . '%' : '-' }}</td>
-                        <td>{{ $data->ctor ? round($data->ctor * 100, 2) . '%' : '-' }}</td>
+                        <td>{{ number_format($data->ads_manual_cost) }}</td>
+                        <td>{{ number_format($data->ads_auto_cost) }}</td>
+                        <td>{{ $data->ads_total_cost > 0 ? round($data->gmv/ $data->ads_total_cost, 2) : '-'  }}</td>
+                        <td>{{ $data->gmv > 0 ? round($data->ads_total_cost*100 / $data->gmv, 2). '%' : '-'  }}</td>
+                        <td>{{ number_format($data->live_impressions) }}</td>
+                        <td>{{ number_format($data->views) }}</td>
+                        <td>{{ number_format($data->product_clicks) }}</td>
+                        <td>{{ number_format($data->items_sold) }}</td>
+                        <td>{{ $data->live_impressions > 0? round($data->views/ $data->live_impressions*100, 2) . '%' : '-' }}</td>
+                        <td>{{ $data->views > 0 ? round($data->product_clicks/$data->views * 100, 2) . '%' : '-' }}</td>
+                        <td>{{ $data->product_clicks > 0 ? round($data->items_sold/ $data->product_clicks * 100, 2) . '%' : '-' }}</td>
                     </tr>
                     @php
                         $totalGMV += $data->gmv;
                         $totalCost += $data->ads_total_cost;
+                        $totalManualCost += $data->ads_manual_cost;
+                        $totalAutoCost += $data->ads_auto_cost;
                         $totalItems += $data->items_sold;
                         $totalClicks += $data->product_clicks;
                         $totalImpressions +=$data->live_impressions;
@@ -118,12 +126,14 @@
                     <td>Tổng</td>
                     <td>{{ number_format($totalGMV) }}</td>
                     <td>{{ number_format($totalCost) }}</td>
-                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) : '-' }}</td>
-                    <td>{{ $totalGMV > 0 ? round($totalCost*100 / $totalGMV, 2) : '-' }}</td>
-                    <td>{{ $totalImpressions }}</td>
-                    <td>{{ $totalViews }}</td>
-                    <td>{{ $totalClicks }}</td>
-                    <td>{{ $totalItems }}</td>
+                    <td>{{ number_format($totalManualCost) }}</td>
+                    <td>{{ number_format($totalAutoCost) }}</td>
+                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) . '%' : '-' }}</td>
+                    <td>{{ $totalGMV > 0 ? round($totalCost*100 / $totalGMV, 2) . '%' : '-' }}</td>
+                    <td>{{ number_format($totalImpressions) }}</td>
+                    <td>{{ number_format($totalViews) }}</td>
+                    <td>{{ number_format($totalClicks) }}</td>
+                    <td>{{ number_format($totalItems) }}</td>
                     <td>
                         {{ $totalImpressions > 0 ? round(($totalViews / $totalImpressions) * 100, 2) . '%' : '-' }}
                     </td>

@@ -15,7 +15,11 @@ class AdsManualDataDay extends Model
 
     protected $fillable = [
         'room_id',
-        'date', 'cost_usd', 'cost_local', 'cpc_usd', 'cpa_usd',
+        'date', 
+        'type',  
+        'hour',           // ✅ THÊM
+                // ✅ THÊM
+        'cost_usd', 'cost_local', 'cpc_usd', 'cpa_usd',
         'total_purchases', 'cost_per_payment', 'impressions', 'ctr', 'cpm',
         'cpc', 'clicks', 'conversions', 'cvr', 'cpa', 'roas_purchase',
         'roas_payment', 'roas_on_site', 'shopping_purchases', 'purchase_count',

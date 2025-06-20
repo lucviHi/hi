@@ -7,7 +7,7 @@
         <div class="nav nav-pills d-flex align-items-center">
             <a href="{{ route('staff_roles.index', $room->id) }}" class="nav-item nav-link">Quản lý nhân sự</a>
             <span class="mx-2">|</span>
-            <a href="#" class="nav-item nav-link">Quản lý ca trực</a>
+            <a href="{{ route('live_target_days.index', $room->id)}}" class="nav-item nav-link">Quản lý ca trực</a>
             <span class="mx-2">|</span>
             <a href="{{ route('live_performance.daily',$room->id) }}" class="nav-item nav-link">Quản lý Livestream</a>
             <span class="mx-2">|</span>

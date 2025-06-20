@@ -32,9 +32,9 @@ class LivePerformanceAggregator
     
     // sau này thêm:
     // public static function updateFromAuto(...) {}
-    public static function updateFromAuto($room_id, $date, $hour, $type, $cost, $gross_revenue, $roi)
+    public static function updateFromAuto($room_id, $date, $hour, $type, $cost)
 {
-    $auto_revenue = $gross_revenue * 0.8;
+    //$auto_revenue = $gross_revenue * 0.8;
 
     $live = LivePerformanceDay::firstOrNew([
         'room_id' => $room_id,
@@ -44,15 +44,15 @@ class LivePerformanceAggregator
     ]);
 
     $live->ads_auto_cost = $cost;
-    $live->gross_revenue = $gross_revenue;
-    $live->auto_revenue = $auto_revenue;
-    $live->roi = $roi;
+    //$live->gross_revenue = $gross_revenue;
+    //$live->auto_revenue = $auto_revenue;
+    //$live->roi = $roi;
 
     $live->ads_total_cost = ($live->ads_manual_cost ?? 0) + $cost;
 
-    if ($live->ads_total_cost > 0) {
-        $live->roas_total = round((($live->manual_revenue ?? 0) + $auto_revenue) / $live->ads_total_cost, 2);
-    }
+    // if ($live->ads_total_cost > 0) {
+    //     $live->roas_total = round((($live->manual_revenue ?? 0) + $auto_revenue) / $live->ads_total_cost, 2);
+    // }
 
     $live->save();
 }
@@ -99,11 +99,13 @@ class LivePerformanceAggregator
 public static function updateStreamerSummary($room_id, $date, $hour = null, $type = 'daily')
 {
     $query = \App\Models\StreamerDataDay::where('room_id', $room_id)
-        ->whereDate('start_time', $date);
+        ->whereDate('start_time', $date)
+        ->where('type', $type);
 
-    // if ($type === 'hourly') {
-    //     $query->whereHour('start_time', intval($hour));
-    // }
+    // ✅ THÊM điều kiện lọc giờ nếu là loại hourly
+    if ($type === 'hourly' && $hour !== null) {
+        $query->where('hour', intval($hour)); // dùng trường hour trong bảng streamer_data_days
+    }
 
     $sessions = $query->get();
 
@@ -111,19 +113,16 @@ public static function updateStreamerSummary($room_id, $date, $hour = null, $typ
     $paid_orders = $sessions->sum('paid_orders');
     $views = $sessions->sum('views');
     $product_clicks = $sessions->sum('product_clicks');
-    // $gmvPer1kImpressions = optional($sessions->sortByDesc('start_time')->first())->gmv_per_1k_impressions;
 
-    // $liveImpressions = ($gmv > 0 && $gmvPer1kImpressions > 0)
-    //     ? round($gmv / $gmvPer1kImpressions * 1000)
-    //     : 0;
+    // ✅ Tính live impressions (không cộng dồn sai)
     $liveImpressions = $sessions->reduce(function ($carry, $item) {
-    if ($item->gmv > 0 && $item->gmv_per_1k_impressions > 0) {
-        return $carry + round($item->gmv / $item->gmv_per_1k_impressions * 1000);
-    }
-    return $carry;
-}, 0);
+        if ($item->gmv > 0 && $item->gmv_per_1k_impressions > 0) {
+            return $carry + round($item->gmv / $item->gmv_per_1k_impressions * 1000);
+        }
+        return $carry;
+    }, 0);
 
-
+    // ✅ Ghi đè hoàn toàn (KHÔNG cộng dồn)
     $record = \App\Models\LivePerformanceDay::firstOrNew([
         'room_id' => $room_id,
         'date' => $date,
@@ -143,6 +142,7 @@ public static function updateStreamerSummary($room_id, $date, $hour = null, $typ
 
     $record->save();
 }
+
 
 
 
