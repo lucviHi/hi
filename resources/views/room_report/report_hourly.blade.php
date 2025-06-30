@@ -29,12 +29,14 @@
                     <th>Mục tiêu / giờ</th>
                     <th>% đạt</th>
                     <th>Chi Phí QC</th>
+                    <th>% Chi Phí QC</th>
                     <th>Ads Thủ Công</th>
                     <th>Ads Tự Động</th>
                     <th>Hiển Thị</th>
                     <th>Lượt Xem</th>
                     <th>Click SP</th>
-                    <th>Bán</th>
+                    <th>AOV</th>
+                    <th>Sản phẩm bán ra</th>
                     <th>Vào Phòng</th>
                     <th>CTR</th>
                     <th>CTOR</th>
@@ -48,11 +50,13 @@
                     <td>{{ number_format($row->target_gmv) }}</td>
                     <td>{{ $row->percent_achieved !== null ? $row->percent_achieved . '%' : '-' }}</td>
                     <td>{{ number_format($row->ads_total_cost) }}</td>
+                    <td>{{ $row->gmv == 0 ? '0%' : round($row->ads_total_cost * 100 / $row->gmv, 2) . '%' }}</td>
                     <td>{{ number_format($row->ads_manual_cost) }}</td>
                     <td>{{ number_format($row->ads_auto_cost) }}</td>
                     <td>{{ number_format($row->live_impressions) }}</td>
                     <td>{{ number_format($row->views) }}</td>
                     <td>{{ number_format($row->product_clicks) }}</td>
+                    <td>{{ ($row->items_sold > 0) ? number_format($row->gmv / $row->items_sold) : '-' }}</td>
                     <td>{{ number_format($row->items_sold) }}</td>
                     <td>{{ round($row->entry_rate, 2) . '%'}}</td>
                     <td>{{ round($row->ctr, 2) . '%' }}</td>
@@ -64,18 +68,24 @@
     <td>Tổng</td>
     <td>{{ number_format($differences->sum('gmv')) }}</td>
     <td>{{ number_format($differences->count() * $targetPerHour) }}</td>
-    <td>
-        @php
-            $percentAchieved = $targetPerHour > 0 ? round($differences->sum('gmv') / ($differences->count() * $targetPerHour) * 100, 2) : null;
-        @endphp
-        {{ $percentAchieved !== null ? $percentAchieved . '%' : '-' }}
-    </td>
+   <td>
+    @php
+        $diffCount = $differences->count();
+        $percentAchieved = ($targetPerHour > 0 && $diffCount > 0)
+            ? round($differences->sum('gmv') / ($diffCount * $targetPerHour) * 100, 2)
+            : null;
+    @endphp
+    {{ $percentAchieved !== null ? $percentAchieved . '%' : '-' }}
+</td>
+
     <td>{{ number_format($differences->sum('ads_total_cost')) }}</td>
+    <td>{{ $differences->sum('gmv') == 0 ? '0%' : round($differences->sum('ads_total_cost') * 100 / $differences->sum('gmv'), 2) . '%' }}</td>
     <td>{{ number_format($differences->sum('ads_manual_cost')) }}</td>
     <td>{{ number_format($differences->sum('ads_auto_cost')) }}</td>
     <td>{{ number_format($differences->sum('live_impressions')) }}</td>
     <td>{{ number_format($differences->sum('views')) }}</td>
     <td>{{ number_format($differences->sum('product_clicks')) }}</td>
+    <td>{{ ($differences->sum('items_sold') > 0) ? number_format($differences->sum('gmv') / $differences->sum('items_sold')) : '-' }}</td>
     <td>{{ number_format($differences->sum('items_sold')) }}</td>
     <td>
       ---

@@ -119,6 +119,7 @@
                     <th>Lượt Click sản phẩm</th>
                     <th>Sản phẩm bán</th>
                     <th>Vào phòng</th>
+                    <th>AOV sku</th>
                     <th>CTR</th>
                     <th>CTOR</th>
                 </tr>
@@ -151,6 +152,7 @@
                         <td>{{ number_format($data->product_clicks) }}</td>
                         <td>{{ number_format($data->items_sold) }}</td>
                         <td>{{ $data->live_impressions > 0? round($data->views/ $data->live_impressions*100, 2) . '%' : '-' }}</td>
+                        <td>{{ $data->items_sold > 0? number_format($data->gmv/ $data->items_sold) : '-' }}</td>
                         <td>{{ $data->views > 0 ? round($data->product_clicks/$data->views * 100, 2) . '%' : '-' }}</td>
                         <td>{{ $data->product_clicks > 0 ? round($data->items_sold/ $data->product_clicks * 100, 2) . '%' : '-' }}</td>
                     </tr>
@@ -182,6 +184,9 @@
                     <td>{{ number_format($totalItems) }}</td>
                     <td>
                         {{ $totalImpressions > 0 ? round(($totalViews / $totalImpressions) * 100, 2) . '%' : '-' }}
+                    </td>
+                    <td>
+                        {{ $totalItems > 0 ? number_format($totalGMV/ $totalItems ): '-' }}
                     </td>
                     <td>
                         {{ $totalViews > 0 ? round(($totalProductClicks / $totalViews) * 100, 2) . '%' : '-' }}

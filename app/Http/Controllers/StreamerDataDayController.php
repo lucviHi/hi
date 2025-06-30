@@ -76,8 +76,9 @@ class StreamerDataDayController extends Controller
                    $today = Carbon::today()->toDateString();
                    if ($start_date !== $today) continue;
                       }
-                    $date = $start_time->format('Y-m-d');
+                    $date = $start_time->format('Y-m-d'); 
                     $gmv = (int) str_replace(['₫', '.', ','], '', $row[4]);
+                   
                     $total_revenue = (int) str_replace(['₫', '.', ','], '', $row[3]);
                     $avg_price = (int) str_replace(['₫', '.', ','], '', $row[7]);
                     $gmv_per_1k_impressions = (int) str_replace(['₫', '.', ','], '', $row[9]);

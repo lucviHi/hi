@@ -43,7 +43,6 @@ class AdsAutoDataDayController extends Controller
             'type' => 'required|in:daily,hourly',
             'hour' => 'required_if:type,hourly'
         ]);
-    
         $file = $request->file('file');
         $date = $request->input('date'); 
         $type = $request->input('type');
@@ -53,19 +52,23 @@ class AdsAutoDataDayController extends Controller
 
         
 
-        if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) {
+        if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) { 
             $rows = $xlsx->rows(); 
-            array_shift($rows); // Bỏ header
+            $header = array_shift($rows); // dòng tiêu đề
 
-            $expectedColumns = 18;
-    
+            // Tạo map: tên cột → chỉ số
+            $colIndex = array_flip($header);
+
             // Tổng
             $cost = $grossRevenue = $roiSum = 0;
             $count = 0;
-    
+            $usdToVndRate = 26000;
+
             foreach ($rows as $row) {
-                if (count($row) > $expectedColumns || empty($row[2])) continue;
-    
+                if (empty($row[2])) continue;
+                $currency = trim($row[$colIndex['Đơn vị tiền tệ']] ?? 'VND');
+                $originalCost = (float) ($row[2] ?? 0);
+                $costVnd = $currency === 'USD' ? $originalCost * $usdToVndRate : $originalCost;
                 // Ghi từng chiến dịch
                 \App\Models\AdsAutoDay::updateOrCreate([
                     'room_id' => $room_id,
@@ -75,7 +78,8 @@ class AdsAutoDataDayController extends Controller
                     'campaign_id' => $row[0],
                 ], [
                     'campaign_name' => $row[1],
-                    'cost' => $row[2] ?? 0,
+                    'cost' => $originalCost,
+                    //'cost' => $row[2] ?? 0,
                     // 'net_cost' => $row[3] ?? 0,
                     // 'sku_orders' => $row[4] ?? 0,
                     // 'cost_per_order' => $row[5] ?? 0,
@@ -90,13 +94,14 @@ class AdsAutoDataDayController extends Controller
                     // 'cost_per_store_order' => $row[14] ?? 0,
                     // 'gross_revenue_store' => $row[15] ?? 0,
                     // 'roi_store' => $row[16] ?? 0,
-                    // 'currency' => $row[17] ?? 'VND',
+                       'currency' => $currency,
                 ]);
 
                 // Cộng tổng
-                $cost += (int) $row[2] ?? 0;
+                //$cost += (int) $row[2] ?? 0;
                 // $grossRevenue += (int) $row[6] ?? 0;
                 // $roiSum += (float) $row[7] ?? 0;
+                $cost += $costVnd;
                 $count++;
             }
   

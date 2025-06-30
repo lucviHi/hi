@@ -49,6 +49,10 @@ Route::prefix('live_performance')->group(function () {
     Route::get('daily/{room_id}', [LivePerformanceDayController::class, 'daily'])->name('live_performance.daily');
     Route::get('hourly/{room_id}', [LivePerformanceDayController::class, 'hourly'])->name('live_performance.hourly');
 });
+//hiển thị tổng
+Route::get('/live-performance-days/snapshot', [LivePerformanceDayController::class, 'snapshot'])
+    ->name('live_performance_days.snapshot');
+
 Route::resource('live_days', LiveDayController::class);
 Route::get('/rooms/{room_id}/performance/hourly-delta', [LivePerformanceDayController::class, 'compareHourly'])->name('live_performance.hourly_delta');
 

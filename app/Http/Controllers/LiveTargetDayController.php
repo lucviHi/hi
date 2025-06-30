@@ -8,13 +8,7 @@ use Carbon\Carbon;
 
 class LiveTargetDayController extends Controller
 {
-    // public function index($room_id)
-    // {
-    //     $room = Room::findOrFail($room_id);
-    //     $targets = LiveTargetDay::where('room_id', $room_id)->orderBy('date')->get();
 
-    //     return view('live_target_days.index', compact('room', 'targets'));
-    // }
 public function index(Request $request, $room_id)
 {
     $room = Room::findOrFail($room_id);
@@ -37,27 +31,7 @@ public function index(Request $request, $room_id)
         return view('live_target_days.create', compact('room'));
     }
 
-    // public function store(Request $request, $room_id)
-    // {
-        
-    //     $request->validate([
-    //         'date' => 'required|date',
-    //         'gmv_target' => 'nullable|numeric',
-    //         'cost_limit' => 'nullable|numeric',
-    //         'team_count' => 'nullable|integer',
-    //         'day_type' => 'required|in:normal,sale,key',
-    //         'note' => 'nullable|string',
-    //     ]);
-
-
-    //     LiveTargetDay::updateOrCreate(
-    //         ['room_id' => $room_id, 'date' => $request->date],
-    //         $request->only('gmv_target', 'cost_limit', 'team_count', 'day_type', 'note') + ['room_id' => $room_id]
-    //     );
-
-    //     return redirect()->route('live_target_days.index', $room_id)->with('success', 'Đã lưu mục tiêu ngày.');
-    // }
-public function store(Request $request, $room_id)
+    public function store(Request $request, $room_id)
 {
     // Làm sạch số chứa dấu phẩy trước khi validate
     $request->merge([

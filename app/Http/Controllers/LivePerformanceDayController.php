@@ -76,119 +76,7 @@ class LivePerformanceDayController extends Controller
     return view('live_performance.hourly', compact('hourlyData', 'room_id', 'date'));
 }
 
-//     public function compareHourly(Request $request, $room_id)
-// {
-//     $date = $request->input('date', now()->toDateString());
-//     $hourFrom = $request->input('hour_from', 0);
-//     $hourTo = $request->input('hour_to', 23);
 
-//     $data = \App\Models\LivePerformanceDay::where('room_id', $room_id)
-//         ->where('type', 'hourly')
-//         ->where('date', $date)
-//         ->whereBetween('hour', [$hourFrom, $hourTo])
-//         ->orderBy('hour')
-//         ->get();
-
-//     $differences = [];
-
-//     for ($i = 1; $i < $data->count(); $i++) {
-//         $prev = $data[$i - 1];
-//         $curr = $data[$i];
-
-//         $differences[] = (object)[
-//             'hour' => $curr->hour,
-//             'gmv' => $curr->gmv - $prev->gmv,
-//             'ads_total_cost' => $curr->ads_total_cost - $prev->ads_total_cost,
-//             'ads_manual_cost' => $curr->ads_manual_cost - $prev->ads_manual_cost,
-//             'ads_auto_cost' => $curr->ads_auto_cost - $prev->ads_auto_cost,
-//             'views' => $curr->views - $prev->views,
-//             'product_clicks' => $curr->product_clicks - $prev->product_clicks,
-//             'items_sold' => $curr->items_sold - $prev->items_sold,
-//             'live_impressions' => $curr->live_impressions - $prev->live_impressions,
-//             'comments' => $curr->comments - $prev->comments,
-//             'shares' => $curr->shares - $prev->shares,
-//             'ctr' => $curr->ctr, // hoặc giữ nguyên từ $curr
-//             'ctor' => $curr->ctor,
-//         ];
-//     }
-
-//     return view('room_report.report_hourly', compact(
-//         'room_id', 'date', 'hourFrom', 'hourTo', 'differences'
-//     ));
-// }
-
-// public function compareHourly(Request $request, $room_id)
-// {
-//     $date = $request->input('date', now()->toDateString());
-//     $hourFrom = $request->input('hour_from', 0);
-//     $hourTo = $request->input('hour_to', 23);
-
-//     // Lấy target ngày
-//     $target = \App\Models\LiveTargetDay::where('room_id', $room_id)
-//         ->where('date', $date)
-//         ->first();
-
-//     $teamCount = $target->team_count ?? 0;
-//     $gmvTarget = $target->gmv_target ?? 0;
-//     $totalHours = $teamCount * 4;
-//     $targetPerHour = $totalHours > 0 ? $gmvTarget / $totalHours : 0;
-
-//     $data = \App\Models\LivePerformanceDay::where('room_id', $room_id)
-//         ->where('type', 'hourly')
-//         ->where('date', $date)
-//         ->whereBetween('hour', [$hourFrom, $hourTo])
-//         ->orderBy('hour')
-//         ->get();
-
-//     $differences = [];
-
-//     for ($i = 1; $i < $data->count(); $i++) {
-//         $prev = $data[$i - 1];
-//         $curr = $data[$i];
-
-//         $gmv_diff = $curr->gmv - $prev->gmv;
-
-//         $differences[] = (object)[
-//             'hour' => $curr->hour,
-//             'gmv' => $gmv_diff,
-//             'ads_total_cost' => $curr->ads_total_cost - $prev->ads_total_cost,
-//             'ads_manual_cost' => $curr->ads_manual_cost - $prev->ads_manual_cost,
-//             'ads_auto_cost' => $curr->ads_auto_cost - $prev->ads_auto_cost,
-//             'views' => $curr->views - $prev->views,
-//             'product_clicks' => $curr->product_clicks - $prev->product_clicks,
-//             'items_sold' => $curr->items_sold - $prev->items_sold,
-//             'live_impressions' => $curr->live_impressions - $prev->live_impressions,
-//             'comments' => $curr->comments - $prev->comments,
-//             'shares' => $curr->shares - $prev->shares,
-//             'ctr' => $curr->ctr - $prev->ctr,
-//             'ctor' => $curr->ctor - $prev->ctor,
-//             'entry_rate' => $curr->entry_rate - $prev->entry_rate,
-//             // ✅ Tính % đạt mục tiêu giờ
-//             'target_gmv' => $targetPerHour,
-//             'percent_achieved' => $targetPerHour > 0 ? round($gmv_diff / $targetPerHour * 100, 2) : null,
-//         ];
-//     }
-
-//     // ✅ Tính mục tiêu mỗi giờ
-//     $target = LiveTargetDay::where('room_id', $room_id)->where('date', $date)->first();
-//     $targetPerHour = 0;
-
-//     if ($target && $target->gmv_target && $target->team_count > 0) {
-//         $totalHours = $target->team_count * 4;
-//         $targetPerHour = $target->gmv_target / $totalHours;
-//     }
-
-//     return view('room_report.report_hourly', [
-//     'room_id' => $room_id,
-//     'date' => $date,
-//     'hourFrom' => $hourFrom,
-//     'hourTo' => $hourTo,
-//     'differences' => collect($differences),
-//     'targetPerHour' => $targetPerHour,
-
-// ]);
-
-// }
 public function compareHourly(Request $request, $room_id)
 {
     $date = $request->input('date', now()->toDateString());
@@ -261,6 +149,42 @@ public function compareHourly(Request $request, $room_id)
     'targetPerHour' => $targetPerHour,
 
 ]);
+}
+
+   public function snapshot(Request $request)
+{
+    // Lấy ngày được chọn từ request, mặc định là hôm nay
+    $date = $request->input('date', now()->toDateString());
+
+    // Lấy danh sách room và giờ mới nhất của mỗi room trong ngày đó
+    $latestHours = \App\Models\LivePerformanceDay::where('type', 'hourly')
+        ->where('date', $date)
+        ->select('room_id')
+        ->selectRaw('MAX(hour) as latest_hour')
+        ->groupBy('room_id')
+        ->get();
+
+    $snapshot = collect();
+
+    foreach ($latestHours as $item) {
+        $record = \App\Models\LivePerformanceDay::where('type', 'hourly')
+            ->where('room_id', $item->room_id)
+            ->where('date', $date)
+            ->where('hour', $item->latest_hour)
+            ->first();
+
+        if ($record) {
+            $snapshot->push($record);
+        }
+    }
+
+    // Sắp xếp theo GMV giảm dần
+    $snapshot = $snapshot->sortByDesc('gmv')->values();
+
+    return view('live_performance.snap_hourly', [
+        'snapshot' => $snapshot,
+        'selectedDate' => $date,
+    ]);
 }
 
 
