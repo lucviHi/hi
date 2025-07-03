@@ -23,15 +23,11 @@
         {{-- Dashboard (chỉ admin) --}}
         @if ($isAdmin)
         <li class="nav-item">
-          <a href="#" class="nav-link">
+          <a href="{{ route('admin.dashboard') }}" class="nav-link">
             <i class="nav-icon bi bi-box-seam-fill"></i>
-            <p>Dashboard <i class="nav-arrow bi bi-chevron-right"></i></p>
+            <p>Dashboard <i class="nav-arrow bi "></i></p>
           </a>
-          <ul class="nav nav-treeview">
-            <li class="nav-item"><a href="#" class="nav-link"><i class="nav-icon bi bi-circle"></i><p>Doanh thu</p></a></li>
-            <li class="nav-item"><a href="#" class="nav-link"><i class="nav-icon bi bi-circle"></i><p>Chi Phí</p></a></li>
-            <li class="nav-item"><a href="#" class="nav-link"><i class="nav-icon bi bi-circle"></i><p>Hoa Hồng</p></a></li>
-          </ul>
+  
         </li>
         @endif
 

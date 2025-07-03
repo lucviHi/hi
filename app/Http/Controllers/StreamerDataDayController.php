@@ -165,6 +165,14 @@ foreach (array_keys($datesToUpdate) as $dateToUpdate) {
         $type === 'hourly' ? $hour : null,
         $type
     );
+     if ($type === 'hourly') {
+        app(\App\Http\Controllers\LivePerformanceSnapController::class)
+            ->snapshotDeltaHourly($room_id, $dateToUpdate);
+    }
+
+    // ✅ Tạo snapshot delta theo ngày
+    app(\App\Http\Controllers\LivePerformanceSnapController::class)
+        ->snapshotDeltaDaily($room_id, $dateToUpdate);
 }
 
 

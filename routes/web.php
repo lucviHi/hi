@@ -5,7 +5,7 @@ use App\Http\Controllers\{
     RoomController, ProjectController, PlatformController, RoleController, StaffController,
     StaffRoleController, LiveDayController, AdsManualDataDayController, AdsGmvMaxDataDayController,
     StreamerDataDayController, AdsAutoDataDayController, LivePerformanceDayController,
-    AuthController, AdminAuthController, LayoutController
+    AuthController, AdminAuthController, LayoutController, LivePerformanceSnapController, AdminDashboardController
 };
 
 // ===================== PUBLIC =====================
@@ -21,6 +21,12 @@ Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 });
+
+
+Route::middleware('auth:admin')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+});
+
 // Danh sách phòng
 Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
 
@@ -54,8 +60,21 @@ Route::get('/live-performance-days/snapshot', [LivePerformanceDayController::cla
     ->name('live_performance_days.snapshot');
 
 Route::resource('live_days', LiveDayController::class);
-Route::get('/rooms/{room_id}/performance/hourly-delta', [LivePerformanceDayController::class, 'compareHourly'])->name('live_performance.hourly_delta');
+//Route::get('/rooms/{room_id}/performance/hourly-delta', [LivePerformanceDayController::class, 'compareHourly'])->name('live_performance.hourly_delta');
 
+// Hiển thị snap
+Route::get('/snapshots/{room_id}/{date}/{type}/delta', [
+    LivePerformanceSnapController::class,
+    'snapshotDelta'
+])->name('snapshots.delta.any');
+
+Route::get('/snapshots/{room_id}/compare-hourly', [
+    LivePerformanceSnapController::class,'compareHourlyFromSnapshot'
+])->name('snapshots.compare.hourly');
+// assign host cho snap
+Route::post('/snapshots/assign-hosts', [
+    LivePerformanceSnapController::class, 'assignHosts'
+])->name('snapshots.assign.hosts');
 
 
 Route::get('/live_days', [LiveDayController::class, 'index'])->name('live_days.index');
@@ -82,7 +101,7 @@ Route::put('rooms/live_target_days/bulk-update/{room_id}', [LiveTargetDayControl
 
 // ===================== ADMIN ROUTES =====================
 Route::middleware('auth:admin')->group(function () {
-    Route::get('/dashboard', fn() => view('admin.dashboard'))->name('admin.dashboard');
+    // Route::get('/dashboard', fn() => view('admin.dashboard'))->name('admin.dashboard');
 
   
     Route::resources([

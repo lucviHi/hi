@@ -34,9 +34,9 @@ class AdsAutoDataDayController extends Controller
         return view('ads_auto_data_days.index', compact('data', 'room', 'startDate', 'endDate', 'type'));
     }
 
-    
+
     public function import(Request $request, $room_id)
-    { 
+    {
         $request->validate([
             'file' => 'required|mimes:xlsx|max:2048',
             'date' => 'required|date',
@@ -44,16 +44,16 @@ class AdsAutoDataDayController extends Controller
             'hour' => 'required_if:type,hourly'
         ]);
         $file = $request->file('file');
-        $date = $request->input('date'); 
+        $date = $request->input('date');
         $type = $request->input('type');
         //$hour = $type === 'hourly' ? $request->input('hour') : null;
         $hour = $type === 'hourly' ? intval($request->input('hour')) : null;
         $route = $type === 'hourly' ? 'live_performance.hourly' : 'live_performance.daily';
 
-        
 
-        if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) { 
-            $rows = $xlsx->rows(); 
+
+        if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) {
+            $rows = $xlsx->rows();
             $header = array_shift($rows); // dòng tiêu đề
 
             // Tạo map: tên cột → chỉ số
@@ -65,7 +65,8 @@ class AdsAutoDataDayController extends Controller
             $usdToVndRate = 26000;
 
             foreach ($rows as $row) {
-                if (empty($row[2])) continue;
+                if (empty($row[2]))
+                    continue;
                 $currency = trim($row[$colIndex['Đơn vị tiền tệ']] ?? 'VND');
                 $originalCost = (float) ($row[2] ?? 0);
                 $costVnd = $currency === 'USD' ? $originalCost * $usdToVndRate : $originalCost;
@@ -94,7 +95,7 @@ class AdsAutoDataDayController extends Controller
                     // 'cost_per_store_order' => $row[14] ?? 0,
                     // 'gross_revenue_store' => $row[15] ?? 0,
                     // 'roi_store' => $row[16] ?? 0,
-                       'currency' => $currency,
+                    'currency' => $currency,
                 ]);
 
                 // Cộng tổng
@@ -104,7 +105,7 @@ class AdsAutoDataDayController extends Controller
                 $cost += $costVnd;
                 $count++;
             }
-  
+
             //$roiAvg = $cost > 0 ? round($grossRevenue / $cost, 2) : 0;
             // Gọi cập nhật tổng hợp
             \App\Services\LivePerformanceAggregator::updateFromAuto(
@@ -116,15 +117,22 @@ class AdsAutoDataDayController extends Controller
                 // $grossRevenue,
                 // $roiAvg
             );
-            
+            // 🔁 Gọi snapshot delta
+            if ($type === 'hourly') {
+                app(\App\Http\Controllers\LivePerformanceSnapController::class)
+                    ->snapshotDeltaHourly($room_id, $date);
+            }
+
+            app(\App\Http\Controllers\LivePerformanceSnapController::class)
+                ->snapshotDeltaDaily($room_id, $date);
             return redirect()->route($route, $room_id)
-                             ->with('success', 'Import dữ liệu Ads Auto thành công!');
+                ->with('success', 'Import dữ liệu Ads Auto thành công!');
         }
-    
+
         return redirect()->route($route, $room_id)
-                         ->with('error', 'Không thể đọc file Excel.');
+            ->with('error', 'Không thể đọc file Excel.');
     }
-    
+
     public function destroy(Request $request, $id)
     {
         $data = AdsAutoDay::findOrFail($id);
@@ -132,7 +140,7 @@ class AdsAutoDataDayController extends Controller
 
         $room_id = $request->input('room_id');
         return redirect()->route('ads_auto_data_days.index', $room_id)
-                         ->with('success', 'Bản ghi đã được xóa thành công.');
+            ->with('success', 'Bản ghi đã được xóa thành công.');
     }
 
     public function trashed($room_id)
@@ -150,7 +158,7 @@ class AdsAutoDataDayController extends Controller
         $data->restore();
 
         return redirect()->route('ads_auto_data_days.trashed', $data->room_id)
-                         ->with('success', 'Khôi phục bản ghi thành công.');
+            ->with('success', 'Khôi phục bản ghi thành công.');
     }
 
     public function forceDelete($id)
@@ -160,6 +168,6 @@ class AdsAutoDataDayController extends Controller
         $data->forceDelete();
 
         return redirect()->route('ads_auto_data_days.trashed', $room_id)
-                         ->with('success', 'Bản ghi đã được xóa vĩnh viễn.');
+            ->with('success', 'Bản ghi đã được xóa vĩnh viễn.');
     }
 }

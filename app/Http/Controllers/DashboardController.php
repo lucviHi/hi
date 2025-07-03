@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Room;
+use App\Models\LivePerformanceSnap;
 
 class DashboardController extends Controller
 {
@@ -35,5 +36,6 @@ class DashboardController extends Controller
             'channelExpenses'
         ));
     }
-}
+
+ }
 

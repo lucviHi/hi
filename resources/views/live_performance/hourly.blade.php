@@ -61,7 +61,7 @@
             <button type="submit" class="btn btn-primary w-100">Import</button>
         </form>
     </div>
-    <a class="btn btn-outline-primary "href=" {{route ('live_performance.hourly_delta',['room_id' => $room_id])}}">Sang trang Snap</a>
+    <a class="btn btn-outline-primary "href=" {{route ('snapshots.compare.hourly',['room_id' => $room_id])}}">Sang trang Snap</a>
 
 </div>
 

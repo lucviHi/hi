@@ -20,4 +20,9 @@ class Room extends Model
     {
         return $this->hasMany(StaffRole::class);
     }
+    public function staffs()
+{
+    return $this->belongsToMany(\App\Models\Staff::class, 'staff_roles');
+}
+
 }

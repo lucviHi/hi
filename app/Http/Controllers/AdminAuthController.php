@@ -21,7 +21,7 @@ class AdminAuthController extends Controller
     $credentials = $request->only('email', 'password');
 
     if (Auth::guard('admin')->attempt($credentials)) {
-        return redirect()->route('rooms.index');
+        return redirect()->route('admin.dashboard');
     }
 
     return back()->withErrors(['email' => 'Email hoặc mật khẩu sai.']);

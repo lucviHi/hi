@@ -33,4 +33,6 @@ class Staff extends Authenticatable
     {
         return $this->belongsToMany(Room::class, 'staff_roles');
     }
+ 
+
 }
