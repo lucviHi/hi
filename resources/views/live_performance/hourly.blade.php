@@ -8,10 +8,10 @@
    <!-- Hàng trên: chọn giờ dùng chung -->
 <div class="row mb-3 align-items-end">
     <div class="col-md-3">
-        <label class="form-label">Khung giờ:</label>
+        <label class="form-label">Giờ Import:</label>
         <select id="shared-hour" class="form-select">
             @for ($i = 0; $i <= 23; $i++)
-                <option value="{{ $i }}" {{ $i == now()->setTimezone('Asia/Ho_Chi_Minh')->hour - 1 ? 'selected' : '' }}>
+                <option value="{{ $i }}" {{ $i == now()->setTimezone('Asia/Ho_Chi_Minh')->hour? 'selected' : '' }}>
                     {{ str_pad($i, 2, '0', STR_PAD_LEFT) }}:00
                 </option>
             @endfor
@@ -156,45 +156,7 @@
                         <td>{{ $data->views > 0 ? round($data->product_clicks/$data->views * 100, 2) . '%' : '-' }}</td>
                         <td>{{ $data->product_clicks > 0 ? round($data->items_sold/ $data->product_clicks * 100, 2) . '%' : '-' }}</td>
                     </tr>
-                    @php
-                        $totalGMV += $data->gmv;
-                        $totalCost += $data->ads_total_cost;
-                        $totalManualCost += $data->ads_manual_cost;
-                        $totalAutoCost += $data->ads_auto_cost;
-                        $totalViews += $data->views;
-                        $totalClicks += $data->product_clicks;
-                        $totalImpressions += $data->live_impressions;
-                        $totalProductClicks += $data->product_clicks ?? 0;
-                        $totalItems += $data->items_sold;
-                        $totalPaidOrders += $data->items_sold ?? 0; // paid_orders bên streamer là items_sold trong bảng tổng
-                    @endphp
-                @endforeach
-
-                <tr class="fw-bold bg-light">
-                    <td>Tổng</td>
-                    <td>{{ number_format($totalGMV) }}</td>
-                    <td>{{ number_format($totalCost) }}</td>
-                    <td>{{ number_format($totalManualCost) }}</td>
-                    <td>{{ number_format($totalAutoCost) }}</td>
-                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) . '%' : '-' }}</td>
-                    <td>{{ $totalGMV  > 0 ? round($totalCost *100 / $totalGMV, 2) . '%' : '-' }}</td>
-                    <td>{{ number_format($totalImpressions) }}</td>
-                    <td>{{ number_format($totalViews) }}</td>
-                    <td>{{ number_format($totalClicks) }}</td>
-                    <td>{{ number_format($totalItems) }}</td>
-                    <td>
-                        {{ $totalImpressions > 0 ? round(($totalViews / $totalImpressions) * 100, 2) . '%' : '-' }}
-                    </td>
-                    <td>
-                        {{ $totalItems > 0 ? number_format($totalGMV/ $totalItems ): '-' }}
-                    </td>
-                    <td>
-                        {{ $totalViews > 0 ? round(($totalProductClicks / $totalViews) * 100, 2) . '%' : '-' }}
-                    </td>
-                    <td>
-                        {{ $totalProductClicks > 0 ? round(($totalPaidOrders / $totalProductClicks) * 100, 2) . '%' : '-' }}
-                    </td>
-                </tr>
+                @endforeach 
             </tbody>
         </table>
     </div>

@@ -21,7 +21,7 @@
       <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="false">
 
         {{-- Dashboard (chỉ admin) --}}
-        @if ($isAdmin)
+        @if ($isAdmin || $user)
         <li class="nav-item">
           <a href="{{ route('admin.dashboard') }}" class="nav-link">
             <i class="nav-icon bi bi-box-seam-fill"></i>
@@ -32,12 +32,15 @@
         @endif
 
         {{-- Danh sách kênh --}}
+         @if ($isAdmin)
         <li class="nav-item">
           <a href="{{ route('rooms.index') }}" class="nav-link">
             <i class="nav-icon bi bi-palette"></i>
-            <p>{{ $isAdmin ? 'Danh sách Kênh' : 'Kênh của tôi' }}</p>
+            <p>{{  'Danh sách Kênh Live'  }}</p>
           </a>
         </li>
+        @endif
+       
 
         {{-- Kênh quản lý / của tôi --}}
         @if (!empty($roomList))
@@ -64,7 +67,7 @@
 
         {{-- Quản trị (admin only) --}}
         @if ($isAdmin)
-          <li class="nav-item"><a href="{{ route('projects.index') }}" class="nav-link"><i class="nav-icon bi bi-shop"></i><p>Shop</p></a></li>
+          <li class="nav-item"><a href="{{ route('projects.index') }}" class="nav-link"><i class="nav-icon bi bi-shop"></i><p>Mini CEO</p></a></li>
           <li class="nav-item"><a href="{{ route('platforms.index') }}" class="nav-link"><i class="nav-icon bi bi-laptop"></i><p>Dự án</p></a></li>
           <li class="nav-item"><a href="{{ route('roles.index') }}" class="nav-link"><i class="nav-icon bi bi-person-badge"></i><p>Vai trò</p></a></li>
           <li class="nav-item"><a href="{{ route('staffs.index') }}" class="nav-link"><i class="nav-icon bi bi-people-fill"></i><p>Nhân viên</p></a></li>

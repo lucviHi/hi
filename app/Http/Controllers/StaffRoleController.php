@@ -13,6 +13,7 @@ class StaffRoleController extends Controller
     /**
      * Hiển thị danh sách nhân viên trong kênh
      */
+    
     public function index(Room $room)
     {
         $staffRoles = StaffRole::where('room_id', $room->id)->with(['staff', 'role'])->paginate(10);

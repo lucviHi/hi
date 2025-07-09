@@ -7,7 +7,7 @@ use App\Models\StreamerDataDay;
 use App\Models\Room;
 use Shuchkin\SimpleXLSX;
 use Carbon\Carbon;
-
+use App\Models\LivePerformanceDay;
 class StreamerDataDayController extends Controller
 {
     public function index(Request $request, $room_id)
@@ -40,84 +40,74 @@ class StreamerDataDayController extends Controller
         return view('streamer_data_days.import_index', compact('room_id'));
     }
 
-
-
     public function import(Request $request, $room_id)
-    {
-        $request->validate([
-            'file' => 'required|mimes:xlsx|max:2048',
-            'type' => 'required|in:daily,hourly',
-            'hour' => 'required_if:type,hourly'
-        ]);
+{
+    $request->validate([
+        'file' => 'required|mimes:xlsx|max:2048',
+        'type' => 'required|in:daily,hourly',
+        'hour' => 'required_if:type,hourly'
+    ]);
 
-        $file = $request->file('file');
-        $type = $request->input('type');
-        $hour = $type === 'hourly' ? $request->input('hour') : null;
-        $route = $type === 'hourly' ? 'live_performance.hourly' : 'live_performance.daily';
-        
-        if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) {
-            $rows = $xlsx->rows();
-            array_shift($rows); // Xóa dòng ngày
-            array_shift($rows); // Dòng trống
-            $header = array_shift($rows); // Dòng tiêu đề
+    $file = $request->file('file');
+    $type = $request->input('type');
+    $hour = $type === 'hourly' ? (int)$request->input('hour') : null;
+    $route = $type === 'hourly' ? 'live_performance.hourly' : 'live_performance.daily';
 
-            $expectedColumns = 23;
-            $datesToUpdate = []; // chứa các ngày xuất hiện trong file
+    if ($xlsx = \Shuchkin\SimpleXLSX::parse($file->getPathname())) {
+        $rows = $xlsx->rows();
+        array_shift($rows); // Xóa dòng ngày
+        array_shift($rows); // Dòng trống
+        $header = array_shift($rows); // Dòng tiêu đề
 
-            foreach ($rows as $row) {
-        
-                if (count($row) !== $expectedColumns || empty($row[0]))
-                    continue;
+        $expectedColumns = 23;
+        $datesToUpdate = []; // chứa các ngày xuất hiện trong file
+        $cleared = [];
+        foreach ($rows as $row) {
+            if (count($row) !== $expectedColumns || empty($row[0])) continue;
 
-                try {
-                    $start_time = Carbon::createFromFormat('Y-m-d H:i', trim($row[1]));
-                    if ($type === 'hourly') {
-                   $start_date = $start_time->toDateString();
-                   $today = Carbon::today()->toDateString();
-                   if ($start_date !== $today) continue;
-                      }
-                    $date = $start_time->format('Y-m-d'); 
-                    $gmv = (int) str_replace(['₫', '.', ','], '', $row[4]);
-                   
-                    $total_revenue = (int) str_replace(['₫', '.', ','], '', $row[3]);
-                    $avg_price = (int) str_replace(['₫', '.', ','], '', $row[7]);
-                    $gmv_per_1k_impressions = (int) str_replace(['₫', '.', ','], '', $row[9]);
-                    $gmv_per_1k_views = (int) str_replace(['₫', '.', ','], '', $row[10]);
-                    $paid_orders = (int) $row[8];
-                    $views = (int) $row[11];
-                    $ctr = (float) $row[21] ?? null;
-                    $ctor = (float) $row[22] ?? null;
-                    $product_clicks = (int) $row[20];
+            try {
+                $start_time = Carbon::createFromFormat('Y-m-d H:i', trim($row[1]));
 
-                } catch (\Exception $e) {
-                    continue;
+                if ($type === 'hourly') {
+                    $start_date = $start_time->toDateString();
+                    $today = Carbon::today()->toDateString();
+                    if ($start_date !== $today) continue;
                 }
-             
-                $datesToUpdate[$date] = true; // lưu lại ngày đang xử lý
 
-                $existing = StreamerDataDay::where('room_id', $room_id)
-                    ->where('live_name', $row[0])
-                    ->where('start_time', $start_time)
-                    ->first();
+                $date = $start_time->format('Y-m-d');
+                $datesToUpdate[$date] = true;
 
-                $oldData = null;
-                if ($existing) {
-                    $oldData = [
-                        'gmv' => $existing->gmv ?? 0,
-                        'paid_orders' => $existing->paid_orders ?? 0,
-                        'views' => $existing->views ?? 0,
-                        'product_clicks' => $existing->product_clicks ?? 0,
-                        'gmv_per_1k_impressions' => $existing->gmv_per_1k_impressions ?? 0,
-                    ];
-                }
+                // Parse các chỉ số
+                $gmv = (int) str_replace(['₫', '.', ','], '', $row[4]);
+                $total_revenue = (int) str_replace(['₫', '.', ','], '', $row[3]);
+                $avg_price = (int) str_replace(['₫', '.', ','], '', $row[7]);
+                $gmv_per_1k_impressions = (int) str_replace(['₫', '.', ','], '', $row[9]);
+                $gmv_per_1k_views = (int) str_replace(['₫', '.', ','], '', $row[10]);
+                $paid_orders = (int) $row[8];
+                $views = (int) $row[11];
+                $ctr = (float) $row[21] ?? null;
+                $ctor = (float) $row[22] ?? null;
+                $product_clicks = (int) $row[20];
+
+                $key = $room_id . '-' . $date . '-' . $hour . '-' . $type;
+
+if (!isset($cleared[$key])) {
+    StreamerDataDay::where('room_id', $room_id)
+        ->whereDate('start_time', $date)
+        ->when($type === 'hourly', fn($q) => $q->where('hour', $hour))
+        ->where('type', $type)
+        ->delete();
+
+    $cleared[$key] = true;
+}
+
 
                 // Lưu vào bảng chi tiết
-                StreamerDataDay::updateOrCreate([
+                StreamerDataDay::Create([
                     'room_id' => $room_id,
                     'live_name' => $row[0],
                     'start_time' => $start_time,
-                    'hour' => $type === 'hourly' ? intval($hour) : null,
-
+                    'hour' => $type === 'hourly' ? $hour : null,
                     'type' => $type,
                     'duration' => abs((int) $row[2]),
                     'total_revenue' => $total_revenue,
@@ -137,52 +127,49 @@ class StreamerDataDayController extends Controller
                     'comments' => $row[17] ?? 0,
                     'shares' => $row[18] ?? 0,
                     'product_displays' => $row[19] ?? 0,
-                    'product_clicks' => $row[20] ?? 0,
+                    'product_clicks' => $product_clicks,
                     'ctr' => $ctr,
                     'ctor' => $ctor,
                 ]);
-
-                // Gọi cập nhật bảng tổng
-                // \App\Services\LivePerformanceAggregator::updateFromStreamer(
-                //     $room_id,
-                //     $date,
-                //     $hour,
-                //     $type,
-                //     $gmv,
-                //     $paid_orders,
-                //     $views,
-                //     $gmv_per_1k_impressions,
-                //     $product_clicks,
-                //     $oldData // truyền vào đây
-
-                // );
+            } catch (\Exception $e) {
+                continue;
             }
-// ✅ Gọi tổng hợp chỉ số sau khi import xong
-foreach (array_keys($datesToUpdate) as $dateToUpdate) {
-    \App\Services\LivePerformanceAggregator::updateStreamerSummary(
-        $room_id,
-        $dateToUpdate,
-        $type === 'hourly' ? $hour : null,
-        $type
-    );
-     if ($type === 'hourly') {
-        app(\App\Http\Controllers\LivePerformanceSnapController::class)
-            ->snapshotDeltaHourly($room_id, $dateToUpdate);
-    }
-
-    // ✅ Tạo snapshot delta theo ngày
-    app(\App\Http\Controllers\LivePerformanceSnapController::class)
-        ->snapshotDeltaDaily($room_id, $dateToUpdate);
-}
-
-
-            return redirect()->route($route, $room_id)
-                ->with('success', 'Import dữ liệu thành công!');
         }
 
-        return redirect()->route( $route, $room_id)
-            ->with('error', 'Lỗi khi đọc file Excel.');
+        // ✅ Gọi tổng hợp lại sau khi import
+        foreach (array_keys($datesToUpdate) as $dateToUpdate) {
+            // Xóa bản tổng hợp cũ trước khi tổng lại
+            LivePerformanceDay::where([
+                'room_id' => $room_id,
+                'date' => $dateToUpdate,
+                'hour' => $type === 'hourly' ? $hour : null,
+                'type' => $type
+            ])->delete();
+
+            \App\Services\LivePerformanceAggregator::updateStreamerSummary(
+                $room_id,
+                $dateToUpdate,
+                $type === 'hourly' ? $hour : null,
+                $type
+            );
+
+            if ($type === 'hourly') {
+                app(\App\Http\Controllers\LivePerformanceSnapController::class)
+                    ->snapshotDeltaHourly($room_id, $dateToUpdate);
+            }
+
+            app(\App\Http\Controllers\LivePerformanceSnapController::class)
+                ->snapshotDeltaDaily($room_id, $dateToUpdate);
+        }
+
+        return redirect()->route($route, $room_id)
+            ->with('success', 'Import dữ liệu thành công!');
     }
+
+    return redirect()->route($route, $room_id)
+        ->with('error', 'Lỗi khi đọc file Excel.');
+}
+
 
     public function destroy(Request $request, $id)
     {

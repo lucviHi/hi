@@ -70,6 +70,11 @@ class AdsAutoDataDayController extends Controller
                 $currency = trim($row[$colIndex['Đơn vị tiền tệ']] ?? 'VND');
                 $originalCost = (float) ($row[2] ?? 0);
                 $costVnd = $currency === 'USD' ? $originalCost * $usdToVndRate : $originalCost;
+
+    //              // 👉 Bỏ qua nếu chi phí = 0
+    if ($costVnd == 0) {
+        continue;
+    }
                 // Ghi từng chiến dịch
                 \App\Models\AdsAutoDay::updateOrCreate([
                     'room_id' => $room_id,

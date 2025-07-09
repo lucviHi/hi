@@ -58,14 +58,12 @@
                         $totalClicks += $item->product_clicks;
                         $totalOrders += $item->items_sold;
                     @endphp
-                    <tr>
+                 <tr class="{{ $selectedDate == now('Asia/Ho_Chi_Minh')->toDateString() && $item->hour < $currentHour ? 'table-danger' : '' }}">
                         <td>{{ $item->room->name ?? 'Room #' . $item->room_id }}</td>
                         <td>{{ $item->date }}</td>
                         <td>{{ str_pad($item->hour, 2, '0', STR_PAD_LEFT) }}:00</td>
                         <td>{{ number_format($item->gmv) }}</td>
                         <td>{{ number_format($item->ads_total_cost) }}</td>
-                        {{-- <td>{{ number_format($item->ads_manual_cost) }}</td>
-                        <td>{{ number_format($item->ads_auto_cost) }}</td> --}}
                         <td>{{ $item->ads_total_cost > 0 ? round($item->gmv / $item->ads_total_cost, 2) : '-' }}</td>
                         <td>{{ $item->gmv > 0 ? round($item->ads_total_cost * 100 / $item->gmv, 2) . '%' : '-' }}</td>
                         <td>{{ number_format($item->live_impressions) }}</td>

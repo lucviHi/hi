@@ -44,19 +44,52 @@ class LivePerformanceSnapController extends Controller
     }
 
     // Snapshot chênh lệch theo giờ (giờ N - N-1)
-    public function snapshotDeltaHourly($room_id, $date)
-    {
-        $data = LivePerformanceDay::where('room_id', $room_id)
-            ->where('type', 'hourly')->where('date', $date)
-            ->orderBy('hour')->get();
+    // public function snapshotDeltaHourly($room_id, $date)
+    // {
+    //     $data = LivePerformanceDay::where('room_id', $room_id)
+    //         ->where('type', 'hourly')->where('date', $date)
+    //         ->orderBy('hour')->get();
 
-        for ($i = 1; $i < $data->count(); $i++) {
-            $curr = $data[$i];
-            $prev = $data[$i - 1];
+    //     for ($i = 1; $i < $data->count(); $i++) {
+    //         $curr = $data[$i];
+    //         $prev = $data[$i - 1];
 
-            $this->storeDeltaSnapshot($room_id, $date, $curr->hour, 'hourly', $curr, $prev);
-        }
+    //         $this->storeDeltaSnapshot($room_id, $date, $curr->hour, 'hourly', $curr, $prev);
+    //     }
+    // }
+public function snapshotDeltaHourly($room_id, $date)
+{
+    $data = LivePerformanceDay::where('room_id', $room_id)
+        ->where('type', 'hourly')
+        ->where('date', $date)
+        ->orderBy('hour')
+        ->get();
+
+    if ($data->count() > 0) {
+        // Snapshot đầu tiên (delta với 0)
+        $curr = $data[0];
+        $prev = clone $curr;
+
+        $prev->gmv = 0;
+        $prev->ads_total_cost = 0;
+        $prev->views = 0;
+        $prev->live_impressions = 0;
+        $prev->items_sold = 0;
+        $prev->product_clicks = 0;
+        $prev->comments = 0;
+        $prev->shares = 0;
+
+        $this->storeDeltaSnapshot($room_id, $date, $curr->hour, 'hourly', $curr, $prev);
     }
+
+    // Các snapshot tiếp theo (delta thực)
+    for ($i = 1; $i < $data->count(); $i++) {
+        $curr = $data[$i];
+        $prev = $data[$i - 1];
+
+        $this->storeDeltaSnapshot($room_id, $date, $curr->hour, 'hourly', $curr, $prev);
+    }
+}
 
     // Hàm tạo snapshot delta
     public function storeDeltaSnapshot($room_id, $date, $hour, $type, $curr, $prev)
@@ -86,7 +119,7 @@ class LivePerformanceSnapController extends Controller
     }
 
     // So sánh snapshot delta theo giờ (dùng cho báo cáo)
-    public function compareHourlyFromSnapshot(Request $request, $room_id)
+public function compareHourlyFromSnapshot(Request $request, $room_id)
     {
        $staffs = Room::findOrFail($room_id)->staffs()->orderBy('name')->get();
 
@@ -131,6 +164,7 @@ return view('room_report.report_hourly', compact(
 ))->with('staff_id', $request->input('staff_id'));
 
     }
+
 
     public function assignHosts(Request $request)
 {

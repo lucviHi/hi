@@ -3,14 +3,14 @@
 @section('content')
 <div class="container">
     <h2 class="mb-4">Danh sách Phòng</h2>
-    <a href="{{ route('rooms.create') }}" class="btn btn-primary mb-3">Thêm Phòng</a>
+    <a href="{{ route('rooms.create') }}" class="btn btn-primary mb-3">Thêm Kênh</a>
 
     <table class="table table-bordered">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Tên Phòng</th>
-                <th>Thuộc Dự Án</th>
+                <th>Thuộc Mini CEO</th>
                 <th>Hành động</th>
             </tr>
         </thead>

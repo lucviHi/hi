@@ -23,11 +23,11 @@
             </a>
             <a href="{{ route('live_target_days.index', $room->id) }}"
                class="nav-link fw-semibold {{ request()->routeIs('live_target_days.*') ? 'active' : 'text-dark' }}">
-                Ca trực
+                Mục tiêu
             </a>
             <a href="{{ route('live_performance.daily', $room->id) }}"
                class="nav-link fw-semibold {{ request()->routeIs('live_performance.daily') ? 'active' : 'text-dark' }}">
-                Livestream
+                Báo cáo ngày
             </a>
             <a href="{{ route('live_performance.hourly', $room->id) }}"
                class="nav-link fw-semibold {{ request()->routeIs('live_performance.hourly') ? 'active' : 'text-dark' }}">
@@ -419,7 +419,7 @@ const chart = new Chart(ctx, {
         );
     }
 
-    function renderDualChart(canvasId, data, labelBar, labelLine) {
+function renderDualChart(canvasId, data, labelBar, labelLine) {
     const labels = data.map(d => d.date);
     const gmvData = data.map(d => d.gmv);
     const costRateData = data.map(d => d.cost_percent);
@@ -465,13 +465,27 @@ const chart = new Chart(ctx, {
                     beginAtZero: true,
                     position: 'right',
                     title: { display: true, text: '% Chi phí / GMV' },
-                    grid: { drawOnChartArea: false }
+                    grid: { drawOnChartArea: false },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
                 }
             },
             plugins: {
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            if (context.dataset.yAxisID === 'y1') {
+                                return context.dataset.label + ': ' + value + '%';
+                            }
+                            return context.dataset.label + ': ' + value.toLocaleString() + ' ₫';
+                        }
+                    }
                 },
                 legend: {
                     position: 'bottom'
@@ -480,6 +494,7 @@ const chart = new Chart(ctx, {
         }
     });
 }
+
 
 // Render charts
 renderDualChart('chartWeeklyRoom', {!! json_encode($weeklyStats) !!}, 'GMV Tuần này', '% Chi phí/GMV');

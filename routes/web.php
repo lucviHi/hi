@@ -22,10 +22,10 @@ Route::prefix('admin')->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 });
 
-
-Route::middleware('auth:admin')->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-});
+Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+// Route::middleware('auth:admin')->group(function () {
+//     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+// });
 
 // Danh sách phòng
 Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
@@ -58,6 +58,9 @@ Route::prefix('live_performance')->group(function () {
 //hiển thị tổng
 Route::get('/live-performance-days/snapshot', [LivePerformanceDayController::class, 'snapshot'])
     ->name('live_performance_days.snapshot');
+//Hiển thị tổng các kênh
+Route::get('/snapshot/daily-range', [LivePerformanceDayController::class, 'snapshotDailyRange'])
+    ->name('snapshot.daily.range');
 
 Route::resource('live_days', LiveDayController::class);
 //Route::get('/rooms/{room_id}/performance/hourly-delta', [LivePerformanceDayController::class, 'compareHourly'])->name('live_performance.hourly_delta');
@@ -99,6 +102,13 @@ Route::delete('live_target_days/{room_id}/{date}', [LiveTargetDayController::cla
 Route::post('/live_target_days/generate/{room_id}', [LiveTargetDayController::class, 'generate'])->name('live_target_days.generate');
 Route::put('rooms/live_target_days/bulk-update/{room_id}', [LiveTargetDayController::class, 'bulkUpdate'])->name('live_target_days.bulk_update');
 
+Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.search');
+//    Route::get('/rooms/{room}/staff_roles', [StaffRoleController::class, 'index'])->name('staff_roles.index');
+//         Route::get('/rooms/{room}/staff_roles/create', [StaffRoleController::class, 'create'])->name('staff_roles.create');
+//         Route::post('/rooms/{room}/staff_roles', [StaffRoleController::class, 'store'])->name('staff_roles.store');
+//         Route::delete('/rooms/{room}/staff_roles/{staffRole}', [StaffRoleController::class, 'destroy'])->name('staff_roles.destroy');
+//         Route::get('/rooms/{room}/staff_roles/{staffRole}/edit', [StaffRoleController::class, 'edit'])->name('staff_roles.edit');
+//         Route::put('/rooms/{room}/staff_roles/{staffRole}', [StaffRoleController::class, 'update'])->name('staff_roles.update');
 // ===================== ADMIN ROUTES =====================
 Route::middleware('auth:admin')->group(function () {
     // Route::get('/dashboard', fn() => view('admin.dashboard'))->name('admin.dashboard');
@@ -116,7 +126,7 @@ Route::middleware('auth:admin')->group(function () {
     ]);
 
     
-
+ 
 
     // Các route liên quan đến room_id
 
@@ -138,7 +148,7 @@ Route::get('/rooms/{room}/staff_roles/{staffRole}/edit', [StaffRoleController::c
 // Xử lý cập nhật thông tin nhân viên trong kênh
 Route::put('/rooms/{room}/staff_roles/{staffRole}', [StaffRoleController::class, 'update'])->name('staff_roles.update');
 
-Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.search');
+
 //snaps
 
 
@@ -251,7 +261,12 @@ Route::middleware(['auth:web'])->group(function () {
         Route::post('streamer_data_days/{room_id}/restore', [StreamerDataDayController::class, 'restore'])->name('streamer_data_days.restore');
         Route::delete('streamer_data_days/{room_id}/force-delete', [StreamerDataDayController::class, 'forceDelete'])->name('streamer_data_days.forceDelete');
 
-       
+        Route::get('/rooms/{room}/staff_roles', [StaffRoleController::class, 'index'])->name('staff_roles.index');
+        Route::get('/rooms/{room}/staff_roles/create', [StaffRoleController::class, 'create'])->name('staff_roles.create');
+        Route::post('/rooms/{room}/staff_roles', [StaffRoleController::class, 'store'])->name('staff_roles.store');
+        Route::delete('/rooms/{room}/staff_roles/{staffRole}', [StaffRoleController::class, 'destroy'])->name('staff_roles.destroy');
+        Route::get('/rooms/{room}/staff_roles/{staffRole}/edit', [StaffRoleController::class, 'edit'])->name('staff_roles.edit');
+        Route::put('/rooms/{room}/staff_roles/{staffRole}', [StaffRoleController::class, 'update'])->name('staff_roles.update');
     });
 });
 

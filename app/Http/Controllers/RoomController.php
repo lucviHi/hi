@@ -109,64 +109,72 @@ public function show($room_id)
     //     ? Room::findOrFail($room_id)
     //     : auth()->guard('web')->user()->rooms()->where('rooms.id', $room_id)->firstOrFail();
 
-    $today = now()->toDateString();
-    $yesterday = now()->subDay()->toDateString();
-    $startOfMonth = now()->startOfMonth()->toDateString();
-    $endOfMonth = now()->endOfMonth()->toDateString();
+  $today = now()->toDateString();
+$yesterday = now()->subDay()->toDateString();
+$startOfMonth = now()->startOfMonth()->toDateString();
+$endOfMonth = now()->endOfMonth()->toDateString();
 
-    // === 1. Doanh thu hôm nay
-    $todayRevenue = LivePerformanceDay::where('room_id', $room_id)
-        ->whereDate('date', $today)
-        ->sum('gmv') ?? 0;
+// === 1. Doanh thu hôm nay (latest hourly)
+$latestToday = LivePerformanceDay::where('room_id', $room_id)
+    ->whereDate('date', $today)
+    ->where('type', 'hourly')
+    ->orderByDesc('hour')
+    ->first();
 
-    // === 2. Doanh thu hôm qua
-    $yesterdayRevenue = LivePerformanceDay::where('room_id', $room_id)
-        ->whereDate('date', $yesterday)
-        ->sum('gmv') ?? 0;
+$todayRevenue = $latestToday?->gmv ?? 0;
+$todayCost = $latestToday?->ads_total_cost ?? 0;
+$todayCostPercent = $todayRevenue > 0 ? round(($todayCost / $todayRevenue) * 100, 2) : 0;
 
-    // === 3. % chi phí hôm nay
-    $todayCost = LivePerformanceDay::where('room_id', $room_id)
-        ->whereDate('date', $today)
-        ->sum('ads_total_cost') ?? 0;
-    $todayCostPercent = $todayRevenue > 0 ? round(($todayCost / $todayRevenue) * 100, 2) : 0;
+// === 2. Doanh thu hôm qua (latest hourly)
+$latestYesterday = LivePerformanceDay::where('room_id', $room_id)
+    ->whereDate('date', $yesterday)
+    ->where('type', 'daily')
+    ->first();
 
-    // === 4. Doanh thu tháng
-    $monthRevenue = LivePerformanceDay::where('room_id', $room_id)
-        ->whereBetween('date', [$startOfMonth, $endOfMonth])
-        ->sum('gmv') ?? 0;
+$yesterdayRevenue = $latestYesterday?->gmv ?? 0;
 
-    // === 5. % chi phí tháng
-    $monthCost = LivePerformanceDay::where('room_id', $room_id)
-        ->whereBetween('date', [$startOfMonth, $endOfMonth])
-        ->sum('ads_total_cost') ?? 0;
-    $monthCostPercent = $monthRevenue > 0 ? round(($monthCost / $monthRevenue) * 100, 2) : 0;
+// === 3. Doanh thu + chi phí tháng (daily)
+$monthRevenue = LivePerformanceDay::where('room_id', $room_id)
+    ->whereBetween('date', [$startOfMonth, $endOfMonth])
+    ->where('type', 'daily')
+    ->sum('gmv') ?? 0;
 
-    // === 6. % đạt mục tiêu hôm nay
-    $todayTarget = LiveTargetDay::where('room_id', $room_id)
-        ->whereDate('date', $today)
-        ->sum('gmv_target') ?? 0;
-    $todayTargetPercent = $todayTarget > 0 ? round(($todayRevenue / $todayTarget) * 100, 2) : 0;
+$monthCost = LivePerformanceDay::where('room_id', $room_id)
+    ->whereBetween('date', [$startOfMonth, $endOfMonth])
+    ->where('type', 'daily')
+    ->sum('ads_total_cost') ?? 0;
 
-    // === 7. % đạt mục tiêu tháng
-    $monthTarget = LiveTargetDay::where('room_id', $room_id)
-        ->whereBetween('date', [$startOfMonth, $endOfMonth])
-        ->sum('gmv_target') ?? 0;
-    $monthTargetPercent = $monthTarget > 0 ? round(($monthRevenue / $monthTarget) * 100, 2) : 0;
+$monthCostPercent = $monthRevenue > 0 ? round(($monthCost / $monthRevenue) * 100, 2) : 0;
 
-    // === Biểu đồ GMV theo giờ ===
-    $todayData = LivePerformanceDay::where('room_id', $room_id)
-        ->whereDate('date', $today)
-        ->get()
-        ->groupBy(fn($item) => str_pad($item->hour, 2, '0', STR_PAD_LEFT) . ':00')
-        ->map(fn($group) => $group->sum('gmv') ?? 0);
+// === 4. % đạt mục tiêu hôm nay
+$todayTarget = LiveTargetDay::where('room_id', $room_id)
+    ->whereDate('date', $today)
+    ->sum('gmv_target') ?? 0;
+$todayTargetPercent = $todayTarget > 0 ? round(($todayRevenue / $todayTarget) * 100, 2) : 0;
 
-    $yesterdayData = LivePerformanceDay::where('room_id', $room_id)
-        ->whereDate('date', $yesterday)
-        ->get()
-        ->groupBy(fn($item) => str_pad($item->hour, 2, '0', STR_PAD_LEFT) . ':00')
-        ->map(fn($group) => $group->sum('gmv') ?? 0);
+// === 5. % đạt mục tiêu tháng
+$monthTarget = LiveTargetDay::where('room_id', $room_id)
+    ->whereBetween('date', [$startOfMonth, $endOfMonth])
+    ->sum('gmv_target') ?? 0;
+$monthTargetPercent = $monthTarget > 0 ? round(($monthRevenue / $monthTarget) * 100, 2) : 0;
 
-    $allHours = collect(range(0, 23))->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00');
+// === 6. Biểu đồ GMV theo giờ (hourly only)
+$todayData = LivePerformanceDay::where('room_id', $room_id)
+    ->whereDate('date', $today)
+    ->where('type', 'hourly')
+    ->get()
+    ->groupBy(fn($item) => str_pad($item->hour, 2, '0', STR_PAD_LEFT) . ':00')
+    ->map(fn($group) => $group->sum('gmv') ?? 0);
+
+$yesterdayData = LivePerformanceDay::where('room_id', $room_id)
+    ->whereDate('date', $yesterday)
+    ->where('type', 'hourly')
+    ->get()
+    ->groupBy(fn($item) => str_pad($item->hour, 2, '0', STR_PAD_LEFT) . ':00')
+    ->map(fn($group) => $group->sum('gmv') ?? 0);
+
+$allHours = collect(range(0, 23))->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00');
+
 // === Top 3 host chính hôm nay ===
 $topMainHostsToday = LivePerformanceSnap::where('room_id', $room_id)
     ->whereDate('date', $today)
@@ -202,6 +210,7 @@ $endOfWeek = now()->endOfWeek()->toDateString();
 
 $weeklyStats = LivePerformanceDay::where('room_id', $room_id)
     ->whereBetween('date', [$startOfWeek, $endOfWeek])
+    ->where('type', 'daily')
     ->selectRaw('date, SUM(gmv) as gmv, SUM(ads_total_cost) as cost')
     ->groupBy('date')
     ->orderBy('date')
@@ -216,6 +225,7 @@ $weeklyStats = LivePerformanceDay::where('room_id', $room_id)
 
 $monthlyStats = LivePerformanceDay::where('room_id', $room_id)
     ->whereBetween('date', [$startOfMonth, $endOfMonth])
+    ->where('type', 'daily')
     ->selectRaw('date, SUM(gmv) as gmv, SUM(ads_total_cost) as cost')
     ->groupBy('date')
     ->orderBy('date')

@@ -76,116 +76,138 @@ class LivePerformanceDayController extends Controller
     return view('live_performance.hourly', compact('hourlyData', 'room_id', 'date'));
 }
 
-
-// public function compareHourly(Request $request, $room_id)
+//    public function snapshot(Request $request)
 // {
+//     // Lấy ngày được chọn từ request, mặc định là hôm nay
 //     $date = $request->input('date', now()->toDateString());
-//     $hourFrom = $request->input('hour_from', 0);
-//     $hourTo = $request->input('hour_to', 23);
 
-//     // ✅ Lấy mục tiêu ngày
-//     $target = LiveTargetDay::where('room_id', $room_id)
+//     // Lấy danh sách room và giờ mới nhất của mỗi room trong ngày đó
+//     $latestHours = \App\Models\LivePerformanceDay::where('type', 'hourly')
 //         ->where('date', $date)
-//         ->first();
-
-//     $teamCount = $target->team_count ?? 0;
-//     $gmvTarget = $target->gmv_target ?? 0;
-//     $totalHours = $teamCount * 4;
-//     $targetPerHour = ($totalHours > 0 && $gmvTarget > 0) ? $gmvTarget / $totalHours : 0;
-
-//     // ✅ Lấy dữ liệu performance từng giờ
-//     $data = LivePerformanceDay::where('room_id', $room_id)
-//         ->where('type', 'hourly')
-//         ->where('date', $date)
-//         ->whereBetween('hour', [$hourFrom, $hourTo])
-//         ->orderBy('hour')
+//         ->select('room_id')
+//         ->selectRaw('MAX(hour) as latest_hour')
+//         ->groupBy('room_id')
 //         ->get();
 
-//     $differences = [];
+//     $snapshot = collect();
 
-//     for ($i = 1; $i < $data->count(); $i++) {
-//         $prev = $data[$i - 1];
-//         $curr = $data[$i];
+//     foreach ($latestHours as $item) {
+//         $record = \App\Models\LivePerformanceDay::where('type', 'hourly')
+//             ->where('room_id', $item->room_id)
+//             ->where('date', $date)
+//             ->where('hour', $item->latest_hour)
+//             ->first();
 
-//         // Tính chênh lệch từng chỉ số
-//         $gmv_diff = $curr->gmv - $prev->gmv;
-//         $views_diff = $curr->views - $prev->views;
-//         $clicks_diff = $curr->product_clicks - $prev->product_clicks;
-//         $items_diff = $curr->items_sold - $prev->items_sold;
-//         $impressions_diff = $curr->live_impressions - $prev->live_impressions;
-
-//         // Tính lại hiệu suất từ chênh lệch
-//         $entry_rate = $impressions_diff > 0 ? round($views_diff / $impressions_diff * 100, 2) : null;
-//         $ctr = $views_diff > 0 ? round($clicks_diff / $views_diff * 100, 2) : null;
-//         $ctor = $clicks_diff > 0 ? round($items_diff / $clicks_diff * 100, 2) : null;
-
-//         $differences[] = (object)[
-//             'hour' => $curr->hour,
-//             'gmv' => $gmv_diff,
-//             'target_gmv' => $targetPerHour,
-//             'percent_achieved' => $targetPerHour > 0 ? round($gmv_diff / $targetPerHour * 100, 2) : null,
-//             'ads_total_cost' => $curr->ads_total_cost - $prev->ads_total_cost,
-//             'ads_manual_cost' => $curr->ads_manual_cost - $prev->ads_manual_cost,
-//             'ads_auto_cost' => $curr->ads_auto_cost - $prev->ads_auto_cost,
-//             'live_impressions' => $impressions_diff,
-//             'views' => $views_diff,
-//             'product_clicks' => $clicks_diff,
-//             'items_sold' => $items_diff,
-//             'comments' => $curr->comments - $prev->comments,
-//             'shares' => $curr->shares - $prev->shares,
-//             'entry_rate' => $entry_rate,
-//             'ctr' => $ctr,
-//             'ctor' => $ctor,
-//         ];
+//         if ($record) {
+//             $snapshot->push($record);
+//         }
 //     }
 
-  
-//     return view('room_report.report_hourly', [
-//     'room_id' => $room_id,
-//     'date' => $date,
-//     'hourFrom' => $hourFrom,
-//     'hourTo' => $hourTo,
-//     'differences' => collect($differences),
-//     'targetPerHour' => $targetPerHour,
+//     // Sắp xếp theo GMV giảm dần
+//     $snapshot = $snapshot->sortByDesc('gmv')->values();
 
-// ]);
+//     return view('live_performance.snap_hourly', [
+//         'snapshot' => $snapshot,
+//         'selectedDate' => $date,
+//     ]);
 // }
-
-   public function snapshot(Request $request)
+public function snapshot(Request $request)
 {
-    // Lấy ngày được chọn từ request, mặc định là hôm nay
     $date = $request->input('date', now()->toDateString());
+    $currentHour = now()->timezone('Asia/Ho_Chi_Minh')->hour;
 
-    // Lấy danh sách room và giờ mới nhất của mỗi room trong ngày đó
-    $latestHours = \App\Models\LivePerformanceDay::where('type', 'hourly')
+    // Lấy toàn bộ room có tồn tại trong hệ thống
+    $rooms = \App\Models\Room::with('project')->get();
+
+   $data = $rooms->map(function ($room) use ($date) {
+    $latest = \App\Models\LivePerformanceDay::where('room_id', $room->id)
         ->where('date', $date)
-        ->select('room_id')
-        ->selectRaw('MAX(hour) as latest_hour')
-        ->groupBy('room_id')
-        ->get();
+        ->where('type', 'hourly')
+        ->orderByDesc('hour')
+        ->first();
 
-    $snapshot = collect();
+    return (object)[ // 👈 chuyển array => object
+        'room' => $room,
+        'room_id' => $room->id,
+        'date' => $date,
+        'hour' => $latest?->hour,
+        'gmv' => $latest?->gmv ?? 0,
+        'ads_total_cost' => $latest?->ads_total_cost ?? 0,
+        'ads_manual_cost' => $latest?->ads_manual_cost ?? 0,
+        'ads_auto_cost' => $latest?->ads_auto_cost ?? 0,
+        'live_impressions' => $latest?->live_impressions ?? 0,
+        'views' => $latest?->views ?? 0,
+        'product_clicks' => $latest?->product_clicks ?? 0,
+        'items_sold' => $latest?->items_sold ?? 0,
+        'ctr' => $latest?->ctr ?? null,
+        'ctor' => $latest?->ctor ?? null,
+    ];
+});
 
-    foreach ($latestHours as $item) {
-        $record = \App\Models\LivePerformanceDay::where('type', 'hourly')
-            ->where('room_id', $item->room_id)
-            ->where('date', $date)
-            ->where('hour', $item->latest_hour)
-            ->first();
-
-        if ($record) {
-            $snapshot->push($record);
-        }
-    }
 
     // Sắp xếp theo GMV giảm dần
-    $snapshot = $snapshot->sortByDesc('gmv')->values();
+    $data = $data->sortByDesc('gmv')->values();
 
     return view('live_performance.snap_hourly', [
-        'snapshot' => $snapshot,
+        'snapshot' => $data,
         'selectedDate' => $date,
+        'currentHour' => $currentHour,
     ]);
 }
 
+public function snapshotDailyRange(Request $request)
+{
+    $from = $request->input('from_date', now()->timezone('Asia/Ho_Chi_Minh')->subDay()->toDateString());
+    $to = $request->input('to_date', now()->timezone('Asia/Ho_Chi_Minh')->subDay()->toDateString());
+    $projectId = $request->input('project_id');
+    $roomId = $request->input('room_id');
+
+    // Lấy danh sách tất cả rooms (để render filter dropdown)
+    $allRooms = \App\Models\Room::with('project')->get();
+
+    // Lọc danh sách room theo project/room nếu có
+    $rooms = $allRooms->when($projectId, fn($q) => $q->where('project_id', $projectId))
+                      ->when($roomId, fn($q) => $q->where('id', $roomId));
+
+    $data = $rooms->map(function ($room) use ($from, $to) {
+        $records = LivePerformanceDay::where('room_id', $room->id)
+            ->whereBetween('date', [$from, $to])
+            ->where('type', 'daily')
+            ->get();
+
+        $gmv = $records->sum('gmv');
+        $ads = $records->sum('ads_total_cost');
+        $liveImpressions = $records->sum('live_impressions');
+        $views = $records->sum('views');
+        $clicks = $records->sum('product_clicks');
+        $items = $records->sum('items_sold');
+
+        return (object)[
+            'room' => $room,
+            'room_id' => $room->id,
+            'gmv' => $gmv,
+            'ads_total_cost' => $ads,
+            'live_impressions' => $liveImpressions,
+            'views' => $views,
+            'product_clicks' => $clicks,
+            'items_sold' => $items,
+            'entry_rate' => $liveImpressions > 0 ? round($views / $liveImpressions * 100, 2) : null,
+            'ctr' => $views > 0 ? round($clicks / $views * 100, 2) : null,
+            'ctor' => $clicks > 0 ? round($items / $clicks * 100, 2) : null,
+        ];
+    });
+
+    $data = $data->sortByDesc('gmv')->values();
+
+    return view('live_performance.snap_daily_range', [
+        'snapshot' => $data,
+        'from' => $from,
+        'to' => $to,
+        'projects' => \App\Models\Project::all(),
+        'rooms' => $allRooms,
+        'selectedProject' => $projectId,
+        'selectedRoom' => $roomId,
+    ]);
+}
 
 }

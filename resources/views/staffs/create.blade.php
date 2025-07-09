@@ -24,12 +24,12 @@
 
         <div class="mb-3">
             <label for="password" class="form-label">Mật khẩu</label>
-            <input type="password" class="form-control" id="password" name="password" required>
+            <input type="password" class="form-control" id="password" name="password" >
         </div>
 
         <div class="mb-3">
             <label for="password_confirmation" class="form-label">Xác nhận mật khẩu</label>
-            <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
+            <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" >
         </div>
 
         <button type="submit" class="btn btn-success">Lưu</button>

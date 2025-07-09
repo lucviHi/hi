@@ -42,7 +42,7 @@ class StaffController extends Controller
             'staff_code' => 'required|unique:staffs,staff_code',
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:staffs,email',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'nullable|string|min:6|confirmed',
         ]);
 
         Staff::create([

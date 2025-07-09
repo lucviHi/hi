@@ -3,13 +3,13 @@
 @section('content')
 <div class="container">
     <h2 class="mb-4">Danh sách Shop</h2>
-    <a href="{{ route('projects.create') }}" class="btn btn-primary mb-3">Thêm Shop</a>
+    <a href="{{ route('projects.create') }}" class="btn btn-primary mb-3">Thêm Mini CEO</a>
 
     <table class="table table-bordered">
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Tên Shop</th>
+                <th>Tên Mini CEO</th>
                 <th>Dự án</th>
                 <th>Hành động</th>
             </tr>

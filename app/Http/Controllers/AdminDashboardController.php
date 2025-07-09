@@ -29,15 +29,37 @@ class AdminDashboardController extends Controller
             ? [$selectedRoomId]
             : $rooms->pluck('id');
 
-        // Tổng hợp chỉ số chung
-        $todayRevenue = LivePerformanceDay::whereIn('room_id', $roomIds)->whereDate('date', $today)->sum('gmv');
-        $yesterdayRevenue = LivePerformanceDay::whereIn('room_id', $roomIds)->whereDate('date', $yesterday)->sum('gmv');
+        
+        // Lấy bản ghi muộn nhất theo giờ cho mỗi room hôm nay
+        $latestTodayData = LivePerformanceDay::whereIn('room_id', $roomIds)
+            ->whereDate('date', $today)
+            ->where('type', 'hourly')
+            ->get()
+            ->groupBy('room_id')
+            ->map(fn($items) => $items->sortByDesc('hour')->first());
 
-        $todayCost = LivePerformanceDay::whereIn('room_id', $roomIds)->whereDate('date', $today)->sum('ads_total_cost');
+        $todayRevenue = $latestTodayData->sum('gmv');
+        $todayCost = $latestTodayData->sum('ads_total_cost');
         $todayCostPercent = $todayRevenue > 0 ? round(($todayCost / $todayRevenue) * 100, 2) : 0;
 
-        $monthRevenue = LivePerformanceDay::whereIn('room_id', $roomIds)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('gmv');
-        $monthCost = LivePerformanceDay::whereIn('room_id', $roomIds)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('ads_total_cost');
+        // Hôm qua
+        $latestYesterdayData = LivePerformanceDay::whereIn('room_id', $roomIds)
+            ->whereDate('date', $yesterday)
+            ->where('type', 'hourly')
+            ->get()
+            ->groupBy('room_id')
+            ->map(fn($items) => $items->sortByDesc('hour')->first());
+
+        $yesterdayRevenue = $latestYesterdayData->sum('gmv');
+
+        $monthRevenue = LivePerformanceDay::whereIn('room_id', $roomIds)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->where('type', 'daily')
+            ->sum('gmv');
+        $monthCost = LivePerformanceDay::whereIn('room_id', $roomIds)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->where('type', 'daily')
+            ->sum('ads_total_cost');
         $monthCostPercent = $monthRevenue > 0 ? round(($monthCost / $monthRevenue) * 100, 2) : 0;
 
         $todayTarget = LiveTargetDay::whereIn('room_id', $roomIds)->whereDate('date', $today)->sum('gmv_target');
@@ -46,10 +68,27 @@ class AdminDashboardController extends Controller
         $monthTarget = LiveTargetDay::whereIn('room_id', $roomIds)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('gmv_target');
         $monthTargetPercent = $monthTarget > 0 ? round(($monthRevenue / $monthTarget) * 100, 2) : 0;
 
-        // GMV theo giờ
-        $todayData = LivePerformanceDay::whereIn('room_id', $roomIds)->whereDate('date', $today)->get()->groupBy('hour')->map(fn($g) => $g->sum('gmv'));
-        $yesterdayData = LivePerformanceDay::whereIn('room_id', $roomIds)->whereDate('date', $yesterday)->get()->groupBy('hour')->map(fn($g) => $g->sum('gmv'));
-        $allHours = collect(range(0, 23))->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00');
+$todayDataRaw = LivePerformanceDay::whereIn('room_id', $roomIds)
+    ->whereDate('date', $today)
+    ->where('type', 'hourly')
+    ->get();
+
+$yesterdayDataRaw = LivePerformanceDay::whereIn('room_id', $roomIds)
+    ->whereDate('date', $yesterday)
+    ->where('type', 'hourly')
+    ->get();
+
+
+$allHours = collect(range(0, 23))->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00');
+
+$todayData = $allHours->mapWithKeys(function ($hour) use ($todayDataRaw) {
+    return [$hour => $todayDataRaw->where('hour', (int) substr($hour, 0, 2))->sum('gmv')];
+});
+
+$yesterdayData = $allHours->mapWithKeys(function ($hour) use ($yesterdayDataRaw) {
+    return [$hour => $yesterdayDataRaw->where('hour', (int) substr($hour, 0, 2))->sum('gmv')];
+});
+
 
         // Top host
         $topMainHostsToday = LivePerformanceSnap::whereIn('room_id', $roomIds)
@@ -75,85 +114,157 @@ class AdminDashboardController extends Controller
             ]);
 
         // GMV theo room (kênh)
-        $gmvByRoomToday = Room::when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
-            ->get()
-            ->map(function ($room) use ($today) {
-                return [
-                    'room' => $room->name,
-                    'gmv' => LivePerformanceDay::where('room_id', $room->id)->whereDate('date', $today)->sum('gmv'),
-                ];
-            })->sortByDesc('gmv')->values();
+      $gmvByRoomToday = Room::when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
+    ->get()
+    ->map(function ($room) use ($today) {
+        $latest = LivePerformanceDay::where('room_id', $room->id)
+            ->whereDate('date', $today)
+            ->where('type', 'hourly')
+            ->orderByDesc('hour')
+            ->first();
 
-        $gmvByRoomMonth = Room::when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
-            ->get()
-            ->map(function ($room) use ($startOfMonth, $endOfMonth) {
-                return [
-                    'room' => $room->name,
-                    'gmv' => LivePerformanceDay::where('room_id', $room->id)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('gmv'),
-                ];
-            })->sortByDesc('gmv')->values();
+        return [
+            'room' => $room->name,
+            'gmv' => $latest?->gmv ?? 0,
+        ];
+    })
+    ->sortByDesc('gmv')
+    ->values();
+
+
+      $gmvByRoomMonth = Room::when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
+    ->get()
+    ->map(function ($room) use ($startOfMonth, $endOfMonth) {
+        return [
+            'room' => $room->name,
+            'gmv' => LivePerformanceDay::where('room_id', $room->id)
+                        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+                        ->where('type', 'daily')
+                        ->sum('gmv'),
+        ];
+    })->sortByDesc('gmv')->values();
+
 
         // GMV theo project
-        $gmvByProjectToday = Project::with('rooms')->get()->map(function ($project) use ($today) {
-            $roomIds = $project->rooms->pluck('id');
-            $gmv = LivePerformanceDay::whereIn('room_id', $roomIds)->whereDate('date', $today)->sum('gmv');
-            return ['project' => $project->name, 'gmv' => $gmv];
-        })->sortByDesc('gmv')->values();
+      $gmvByProjectToday = Project::with('rooms')->get()->map(function ($project) use ($today) {
+    $roomIds = $project->rooms->pluck('id');
+    $gmv = LivePerformanceDay::whereIn('room_id', $roomIds)
+                ->whereDate('date', $today)
+                ->where('type', 'hourly')
+                ->sum('gmv');
+    return ['project' => $project->name, 'gmv' => $gmv];
+})->sortByDesc('gmv')->values();
 
-        $gmvByProjectMonth = Project::with('rooms')->get()->map(function ($project) use ($startOfMonth, $endOfMonth) {
-            $roomIds = $project->rooms->pluck('id');
-            $gmv = LivePerformanceDay::whereIn('room_id', $roomIds)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('gmv');
-            return ['project' => $project->name, 'gmv' => $gmv];
-        })->sortByDesc('gmv')->values();
+$gmvByProjectMonth = Project::with('rooms')->get()->map(function ($project) use ($startOfMonth, $endOfMonth) {
+    $roomIds = $project->rooms->pluck('id');
+    $gmv = LivePerformanceDay::whereIn('room_id', $roomIds)
+                ->whereBetween('date', [$startOfMonth, $endOfMonth])
+                ->where('type', 'daily')
+                ->sum('gmv');
+    return ['project' => $project->name, 'gmv' => $gmv];
+})->sortByDesc('gmv')->values();
 
 
-        // === 5. Chi phí theo Room (kênh) ===
+// === 6. Chi phí theo Project (dự án) ===
+$costByProjectToday = Project::with('rooms')->get()->map(function ($project) use ($today) {
+    $roomIds = $project->rooms->pluck('id');
+    $gmv = LivePerformanceDay::whereIn('room_id', $roomIds)
+        ->whereDate('date', $today)
+        ->where('type', 'hourly')
+        ->sum('gmv');
+
+    $cost = LivePerformanceDay::whereIn('room_id', $roomIds)
+        ->whereDate('date', $today)
+        ->where('type', 'hourly')
+        ->sum('ads_total_cost');
+
+    $percent = $gmv > 0 ? round(($cost / $gmv) * 100, 2) : 0;
+
+    return ['project' => $project->name, 'cost_percent' => $percent];
+})->sortByDesc('cost_percent')->values();
+
+$costByProjectMonth = Project::with('rooms')->get()->map(function ($project) use ($startOfMonth, $endOfMonth) {
+    $roomIds = $project->rooms->pluck('id');
+    $gmv = LivePerformanceDay::whereIn('room_id', $roomIds)
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->where('type', 'daily')
+        ->sum('gmv');
+
+    $cost = LivePerformanceDay::whereIn('room_id', $roomIds)
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->where('type', 'daily')
+        ->sum('ads_total_cost');
+
+    $percent = $gmv > 0 ? round(($cost / $gmv) * 100, 2) : 0;
+
+    return ['project' => $project->name, 'cost_percent' => $percent];
+})->sortByDesc('cost_percent')->values();
+
+
 $costByRoomToday = Room::query()
     ->when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
     ->get()
     ->map(function ($room) use ($today) {
+        $gmv = LivePerformanceDay::where('room_id', $room->id)
+            ->whereDate('date', $today)
+            ->where('type', 'hourly')
+            ->sum('gmv');
+
         $cost = LivePerformanceDay::where('room_id', $room->id)
             ->whereDate('date', $today)
+            ->where('type', 'hourly')
             ->sum('ads_total_cost');
-        return ['room' => $room->name, 'cost' => $cost];
-    })->sortByDesc('cost')->values();
+
+        $percent = $gmv > 0 ? round(($cost / $gmv) * 100, 2) : 0;
+
+        return ['room' => $room->name, 'cost_percent' => $percent];
+    })->sortByDesc('cost_percent')->values();
 
 $costByRoomMonth = Room::query()
     ->when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
     ->get()
     ->map(function ($room) use ($startOfMonth, $endOfMonth) {
+        $gmv = LivePerformanceDay::where('room_id', $room->id)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->where('type', 'daily')
+            ->sum('gmv');
+
         $cost = LivePerformanceDay::where('room_id', $room->id)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->where('type', 'daily')
             ->sum('ads_total_cost');
-        return ['room' => $room->name, 'cost' => $cost];
-    })->sortByDesc('cost')->values();
 
-// === 6. Chi phí theo Project (dự án) ===
-$costByProjectToday = Project::with('rooms')->get()->map(function ($project) use ($today) {
-    $roomIds = $project->rooms->pluck('id');
-    $cost = LivePerformanceDay::whereIn('room_id', $roomIds)
-        ->whereDate('date', $today)
-        ->sum('ads_total_cost');
-    return ['project' => $project->name, 'cost' => $cost];
-})->sortByDesc('cost')->values();
+        $percent = $gmv > 0 ? round(($cost / $gmv) * 100, 2) : 0;
 
-$costByProjectMonth = Project::with('rooms')->get()->map(function ($project) use ($startOfMonth, $endOfMonth) {
-    $roomIds = $project->rooms->pluck('id');
-    $cost = LivePerformanceDay::whereIn('room_id', $roomIds)
-        ->whereBetween('date', [$startOfMonth, $endOfMonth])
-        ->sum('ads_total_cost');
-    return ['project' => $project->name, 'cost' => $cost];
-})->sortByDesc('cost')->values();
+        return ['room' => $room->name, 'cost_percent' => $percent];
+    })->sortByDesc('cost_percent')->values();
+
 
 
 // 5. Kênh có chi phí ads > 8%
 $overspendRoomsToday = Room::with('project')->get()->filter(function ($room) use ($today) {
-    $gmv = LivePerformanceDay::where('room_id', $room->id)->whereDate('date', $today)->sum('gmv');
-    $cost = LivePerformanceDay::where('room_id', $room->id)->whereDate('date', $today)->sum('ads_total_cost');
+    $gmv = LivePerformanceDay::where('room_id', $room->id)
+        ->whereDate('date', $today)
+        ->where('type', 'hourly')
+        ->sum('gmv');
+        
+    $cost = LivePerformanceDay::where('room_id', $room->id)
+        ->whereDate('date', $today)
+        ->where('type', 'hourly')
+        ->sum('ads_total_cost');
+
     return $gmv > 0 && ($cost / $gmv) * 100 > 8;
 })->map(function ($room) use ($today) {
-    $gmv = LivePerformanceDay::where('room_id', $room->id)->whereDate('date', $today)->sum('gmv');
-    $cost = LivePerformanceDay::where('room_id', $room->id)->whereDate('date', $today)->sum('ads_total_cost');
+    $gmv = LivePerformanceDay::where('room_id', $room->id)
+        ->whereDate('date', $today)
+        ->where('type', 'hourly')
+        ->sum('gmv');
+
+    $cost = LivePerformanceDay::where('room_id', $room->id)
+        ->whereDate('date', $today)
+        ->where('type', 'hourly')
+        ->sum('ads_total_cost');
+
     return [
         'room' => $room->name,
         'project' => optional($room->project)->name,
@@ -161,13 +272,30 @@ $overspendRoomsToday = Room::with('project')->get()->filter(function ($room) use
     ];
 });
 
+
 $overspendRoomsMonth = Room::with('project')->get()->filter(function ($room) use ($startOfMonth, $endOfMonth) {
-    $gmv = LivePerformanceDay::where('room_id', $room->id)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('gmv');
-    $cost = LivePerformanceDay::where('room_id', $room->id)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('ads_total_cost');
+    $gmv = LivePerformanceDay::where('room_id', $room->id)
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->where('type', 'daily')
+        ->sum('gmv');
+
+    $cost = LivePerformanceDay::where('room_id', $room->id)
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->where('type', 'daily')
+        ->sum('ads_total_cost');
+
     return $gmv > 0 && ($cost / $gmv) * 100 > 8;
 })->map(function ($room) use ($startOfMonth, $endOfMonth) {
-    $gmv = LivePerformanceDay::where('room_id', $room->id)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('gmv');
-    $cost = LivePerformanceDay::where('room_id', $room->id)->whereBetween('date', [$startOfMonth, $endOfMonth])->sum('ads_total_cost');
+    $gmv = LivePerformanceDay::where('room_id', $room->id)
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->where('type', 'daily')
+        ->sum('gmv');
+
+    $cost = LivePerformanceDay::where('room_id', $room->id)
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->where('type', 'daily')
+        ->sum('ads_total_cost');
+
     return [
         'room' => $room->name,
         'project' => optional($room->project)->name,

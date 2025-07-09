@@ -286,70 +286,171 @@
     const todayData = {!! json_encode(array_values($todayData->toArray())) !!};
     const yesterdayData = {!! json_encode(array_values($yesterdayData->toArray())) !!};
 
-    new Chart(document.getElementById('gmvByHourChart'), {
-        type: 'line',
-        data: {
-            labels: allHours,
-            datasets: [
-                {
-                    label: 'Hôm nay',
-                    data: todayData,
-                    borderColor: 'blue',
-                    backgroundColor: 'rgba(0,123,255,0.1)',
-                    fill: true,
-                    tension: 0.4
-                },
-                {
-                    label: 'Hôm qua',
-                    data: yesterdayData,
-                    borderColor: 'orange',
-                    backgroundColor: 'rgba(255,165,0,0.1)',
-                    fill: true,
-                    borderDash: [4, 4],
-                    tension: 0.4
+    // new Chart(document.getElementById('gmvByHourChart'), {
+    //     type: 'line',
+    //     data: {
+    //         labels: allHours,
+    //         datasets: [
+    //             {
+    //                 label: 'Hôm nay',
+    //                 data: todayData,
+    //                 borderColor: 'blue',
+    //                 backgroundColor: 'rgba(0,123,255,0.1)',
+    //                 fill: true,
+    //                 tension: 0.4
+    //             },
+    //             {
+    //                 label: 'Hôm qua',
+    //                 data: yesterdayData,
+    //                 borderColor: 'orange',
+    //                 backgroundColor: 'rgba(255,165,0,0.1)',
+    //                 fill: true,
+    //                 borderDash: [4, 4],
+    //                 tension: 0.4
+    //             }
+    //         ]
+    //     },
+    //     options: {
+    //         responsive: true,
+    //         scales: { y: { beginAtZero: true } }
+    //     }
+    // });
+new Chart(document.getElementById('gmvByHourChart'), {
+    type: 'line',
+    data: {
+        labels: allHours,
+        datasets: [
+            {
+                label: 'Hôm nay',
+                data: todayData,
+                borderColor: 'blue',
+                backgroundColor: 'rgba(0,123,255,0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            },
+            {
+                label: 'Hôm qua',
+                data: yesterdayData,
+                borderColor: 'orange',
+                backgroundColor: 'rgba(255,165,0,0.1)',
+                fill: true,
+                borderDash: [4, 4],
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        interaction: {
+            mode: 'index',
+            intersect: false
+        },
+        plugins: {
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                    label: function(context) {
+                        const value = context.parsed.y || 0;
+                        return context.dataset.label + ': ' + value.toLocaleString() + ' ₫';
+                    }
                 }
-            ]
+            },
+            legend: {
+                position: 'bottom'
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: { display: true, text: 'GMV (₫)' }
+            },
+            x: {
+                title: { display: true, text: 'Giờ' }
+            }
+        }
+    }
+});
+
+    function renderBarChartCurrency(id, labels, data, labelText, color) {
+    new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: labelText,
+                data: data,
+                backgroundColor: color,
+                borderColor: color.replace('0.6', '1'),
+                borderWidth: 1
+            }]
         },
         options: {
             responsive: true,
-            scales: { y: { beginAtZero: true } }
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '₫' },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString('vi-VN') + ' ₫';
+                        }
+                    }
+                },
+                x: { ticks: { autoSkip: false } }
+            }
         }
     });
+}
 
-    function renderBarChart(id, labels, data, labelText, color) {
-        new Chart(document.getElementById(id), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: labelText,
-                    data: data,
-                    backgroundColor: color,
-                    borderColor: color.replace('0.6', '1'),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, title: { display: true, text: '₫' } },
-                    x: { ticks: { autoSkip: false } }
-                }
+function renderBarChartPercent(id, labels, data, labelText, color) {
+    new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: labelText,
+                data: data,
+                backgroundColor: color,
+                borderColor: color.replace('0.6', '1'),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '%' },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                x: { ticks: { autoSkip: false } }
             }
-        });
-    }
+        }
+    });
+}
 
-    // GMV Charts
-    renderBarChart('gmvByRoomTodayChart', {!! json_encode($gmvByRoomToday->pluck('room')) !!}, {!! json_encode($gmvByRoomToday->pluck('gmv')) !!}, 'GMV hôm nay', 'rgba(54, 162, 235, 0.6)');
-    renderBarChart('gmvByRoomMonthChart', {!! json_encode($gmvByRoomMonth->pluck('room')) !!}, {!! json_encode($gmvByRoomMonth->pluck('gmv')) !!}, 'GMV tháng này', 'rgba(75, 192, 192, 0.6)');
-    renderBarChart('gmvByProjectTodayChart', {!! json_encode($gmvByProjectToday->pluck('project')) !!}, {!! json_encode($gmvByProjectToday->pluck('gmv')) !!}, 'GMV hôm nay', 'rgba(255, 206, 86, 0.6)');
-    renderBarChart('gmvByProjectMonthChart', {!! json_encode($gmvByProjectMonth->pluck('project')) !!}, {!! json_encode($gmvByProjectMonth->pluck('gmv')) !!}, 'GMV tháng này', 'rgba(153, 102, 255, 0.6)');
+ // GMV Charts (₫)
+renderBarChartCurrency('gmvByRoomTodayChart', {!! json_encode($gmvByRoomToday->pluck('room')) !!}, {!! json_encode($gmvByRoomToday->pluck('gmv')) !!}, 'GMV hôm nay', 'rgba(54, 162, 235, 0.6)');
+renderBarChartCurrency('gmvByRoomMonthChart', {!! json_encode($gmvByRoomMonth->pluck('room')) !!}, {!! json_encode($gmvByRoomMonth->pluck('gmv')) !!}, 'GMV tháng này', 'rgba(75, 192, 192, 0.6)');
+renderBarChartCurrency('gmvByProjectTodayChart', {!! json_encode($gmvByProjectToday->pluck('project')) !!}, {!! json_encode($gmvByProjectToday->pluck('gmv')) !!}, 'GMV hôm nay', 'rgba(255, 206, 86, 0.6)');
+renderBarChartCurrency('gmvByProjectMonthChart', {!! json_encode($gmvByProjectMonth->pluck('project')) !!}, {!! json_encode($gmvByProjectMonth->pluck('gmv')) !!}, 'GMV tháng này', 'rgba(153, 102, 255, 0.6)');
 
-    // Cost Charts
-    renderBarChart('costByRoomTodayChart', {!! json_encode($costByRoomToday->pluck('room')) !!}, {!! json_encode($costByRoomToday->pluck('cost')) !!}, 'Chi phí hôm nay', 'rgba(255, 99, 132, 0.6)');
-    renderBarChart('costByRoomMonthChart', {!! json_encode($costByRoomMonth->pluck('room')) !!}, {!! json_encode($costByRoomMonth->pluck('cost')) !!}, 'Chi phí tháng này', 'rgba(255, 159, 64, 0.6)');
-    renderBarChart('costByProjectTodayChart', {!! json_encode($costByProjectToday->pluck('project')) !!}, {!! json_encode($costByProjectToday->pluck('cost')) !!}, 'Chi phí hôm nay', 'rgba(54, 162, 235, 0.6)');
-    renderBarChart('costByProjectMonthChart', {!! json_encode($costByProjectMonth->pluck('project')) !!}, {!! json_encode($costByProjectMonth->pluck('cost')) !!}, 'Chi phí tháng này', 'rgba(255, 206, 86, 0.6)');
+// Cost Charts (%)
+renderBarChartPercent('costByRoomTodayChart', {!! json_encode($costByRoomToday->pluck('room')) !!}, {!! json_encode($costByRoomToday->pluck('cost_percent')) !!}, 'Chi phí hôm nay (%)', 'rgba(255, 99, 132, 0.6)');
+renderBarChartPercent('costByRoomMonthChart', {!! json_encode($costByRoomMonth->pluck('room')) !!}, {!! json_encode($costByRoomMonth->pluck('cost_percent')) !!}, 'Chi phí tháng này (%)', 'rgba(255, 159, 64, 0.6)');
+renderBarChartPercent('costByProjectTodayChart', {!! json_encode($costByProjectToday->pluck('project')) !!}, {!! json_encode($costByProjectToday->pluck('cost_percent')) !!}, 'Chi phí hôm nay (%)', 'rgba(54, 162, 235, 0.6)');
+renderBarChartPercent('costByProjectMonthChart', {!! json_encode($costByProjectMonth->pluck('project')) !!}, {!! json_encode($costByProjectMonth->pluck('cost_percent')) !!}, 'Chi phí tháng này (%)', 'rgba(255, 206, 86, 0.6)');
+
 </script>
 @endsection

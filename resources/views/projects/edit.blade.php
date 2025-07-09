@@ -9,7 +9,7 @@
         @method('PUT')
         
         <div class="mb-3">
-            <label for="name" class="form-label">Tên Shop</label>
+            <label for="name" class="form-label">Tên Mini CEO</label>
             <input type="text" name="name" class="form-control" value="{{ $project->name }}" required>
         </div>
 

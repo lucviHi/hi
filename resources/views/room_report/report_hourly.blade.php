@@ -156,7 +156,12 @@
                 <tbody>
                     @foreach ($differences as $row)
                         <tr>
-                            <td>{{ str_pad($row->hour, 2, '0', STR_PAD_LEFT) }}:00</td>
+                            {{-- <td>{{ str_pad($row->hour, 2, '0', STR_PAD_LEFT) }}:00</td> --}}
+                        <td class="text-nowrap">
+                           {{ str_pad($row->hour-1, 2, '0', STR_PAD_LEFT) }} - {{ str_pad(($row->hour) % 24, 2, '0', STR_PAD_LEFT) }}
+                        </td>
+
+
                             <form method="POST" action="{{ route('snapshots.assign.hosts') }}">
                                 @csrf
                                 <input type="hidden" name="room_id" value="{{ $room_id }}">
