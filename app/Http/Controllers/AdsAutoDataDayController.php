@@ -68,7 +68,7 @@ class AdsAutoDataDayController extends Controller
                 if (empty($row[2]))
                     continue;
                 $currency = trim($row[$colIndex['Đơn vị tiền tệ']] ?? 'VND');
-                $originalCost = (float) ($row[2] ?? 0);
+                $originalCost = (float) ($row[$colIndex['Chi phí']] ?? 0);
                 $costVnd = $currency === 'USD' ? $originalCost * $usdToVndRate : $originalCost;
 
     //              // 👉 Bỏ qua nếu chi phí = 0

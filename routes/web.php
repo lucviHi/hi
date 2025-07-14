@@ -27,7 +27,7 @@ Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admi
 //     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 // });
 
-// Danh sách phòng
+// Danh sách phòng......
 Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
 
 // Form tạo phòng
@@ -78,7 +78,9 @@ Route::get('/snapshots/{room_id}/compare-hourly', [
 Route::post('/snapshots/assign-hosts', [
     LivePerformanceSnapController::class, 'assignHosts'
 ])->name('snapshots.assign.hosts');
-
+//Update Deal Cost 
+Route::post('/live-performance/update-deal-cost', [LivePerformanceDayController::class, 'updateDealCost'])
+    ->name('live-performance.update-deal-cost');
 
 Route::get('/live_days', [LiveDayController::class, 'index'])->name('live_days.index');
 Route::get('/live_days/create', [LiveDayController::class, 'create'])->name('live_days.create');
@@ -150,6 +152,7 @@ Route::put('/rooms/{room}/staff_roles/{staffRole}', [StaffRoleController::class,
 
 
 //snaps
+
 
 
 

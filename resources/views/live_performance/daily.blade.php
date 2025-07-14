@@ -3,7 +3,7 @@
 @section('content')
 <div class="container">
     <!-- Nhập file theo ngày --> 
-    <h2 class="mb-3">Quản lý Livestream - Theo Ngày</h2>
+    <h2 class="mb-3">Quản lý Livestream - Theo Ngày </h2>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex gap-4 align-items-end" style="max-width: 980px;">
             <!-- Import Streamer -->
@@ -63,6 +63,10 @@
                 <tr>
                     <th>Ngày</th>
                     <th>GMV</th>
+                    <th>Tổng Chi Phí</th>
+                    <th>%Tổng Chi Phí/ GMV</th>
+                    <th>Chi phí Deal</th>
+                    <th>Lưu Chi phí Deal</th>
                     <th>Chi Phí QC</th>
                     <th>Chi Phí Ads thủ công</th>
                     <th>Chi Phí Ads tự động</th>
@@ -89,12 +93,33 @@
                     $totalViews = 0;
                     $totalProductClicks = 0;
                     $totalPaidOrders = 0;
+                    $totalDeal = 0;
+                    $total = 0;
                 @endphp
-
                 @foreach ($dailyData as $data)
                     <tr>
                         <td>{{ \Carbon\Carbon::parse($data->date)->format('d/m/Y') }}</td>
                         <td>{{ number_format($data->gmv) }}</td>
+                        <td>{{ number_format(($data->ads_total_cost ?? 0) + ($data->deal_cost ?? 0)) }}</td>
+                        <td>
+                            {{ $data->gmv > 0 ? round((($data->ads_total_cost ?? 0) + ($data->deal_cost ?? 0)) * 100 / $data->gmv, 2) . '%' : '-' }}
+                        </td>
+                        <td>
+                <form method="POST" action="{{ route('live-performance.update-deal-cost') }}" class="d-flex">
+                            @csrf
+                            <input type="hidden" name="id" value="{{ $data->id }}">
+                           <input type="text" name="deal_cost" value="{{ number_format($data->deal_cost ?? 0) }}" class="form-control form-control-sm text-end" style="width: 100px;">
+
+                        </td>
+
+                        {{-- Cột nút Lưu --}}
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" title="Lưu">
+                               Lưu
+                            </button>
+                </form>
+                        </td>
+
                         <td>{{ number_format($data->ads_total_cost) }}</td>
                         <td>{{ number_format($data->ads_manual_cost) }}</td>
                         <td>{{ number_format($data->ads_auto_cost) }}</td>
@@ -119,16 +144,22 @@
                         $totalViews += $data->views;
                         $totalProductClicks += $data->product_clicks;
                         $totalPaidOrders += $data->items_sold; // paid_orders bên streamer là items_sold trong bảng tổng
+                        $totalDeal += $data->deal_cost; 
+                        $total += $data->total_cost; 
                     @endphp
                 @endforeach
-
+              
                 <tr class="fw-bold bg-light">
                     <td>Tổng</td>
                     <td>{{ number_format($totalGMV) }}</td>
+                    <td>{{ number_format($total) }}</td>
+                    <td>{{ $totalGMV> 0 ? round($total/ $totalGMV, 2) . '%' : '-' }}</td>
+                    <td>{{ number_format($totalDeal) }}</td>
+                    <td></td>
                     <td>{{ number_format($totalCost) }}</td>
                     <td>{{ number_format($totalManualCost) }}</td>
                     <td>{{ number_format($totalAutoCost) }}</td>
-                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) . '%' : '-' }}</td>
+                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2)  : '-' }}</td>
                     <td>{{ $totalGMV > 0 ? round($totalCost*100 / $totalGMV, 2) . '%' : '-' }}</td>
                     <td>{{ number_format($totalImpressions) }}</td>
                     <td>{{ number_format($totalViews) }}</td>

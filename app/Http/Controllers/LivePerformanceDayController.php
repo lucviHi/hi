@@ -36,6 +36,23 @@ class LivePerformanceDayController extends Controller
     
         return view('live_performance.daily', compact('dailyData', 'room_id', 'startDate', 'endDate'));
     }
+
+   public function updateDealCost(Request $request)
+{
+    $id = $request->input('id');
+    $raw = $request->input('deal_cost');
+    $cleanCost = floatval(str_replace(',', '', $raw)); // xoá dấu phẩy để tránh lỗi
+
+    $record = LivePerformanceDay::find($id);
+    if ($record) {
+        $record->deal_cost = $cleanCost;
+        $record->total_cost = ($record->ads_total_cost ?? 0) + $cleanCost;
+        $record->save();
+    }
+
+    return back()->with('success', 'Đã cập nhật chi phí deal.');
+}
+
     
 
     // Hiển thị theo giờ
@@ -76,41 +93,6 @@ class LivePerformanceDayController extends Controller
     return view('live_performance.hourly', compact('hourlyData', 'room_id', 'date'));
 }
 
-//    public function snapshot(Request $request)
-// {
-//     // Lấy ngày được chọn từ request, mặc định là hôm nay
-//     $date = $request->input('date', now()->toDateString());
-
-//     // Lấy danh sách room và giờ mới nhất của mỗi room trong ngày đó
-//     $latestHours = \App\Models\LivePerformanceDay::where('type', 'hourly')
-//         ->where('date', $date)
-//         ->select('room_id')
-//         ->selectRaw('MAX(hour) as latest_hour')
-//         ->groupBy('room_id')
-//         ->get();
-
-//     $snapshot = collect();
-
-//     foreach ($latestHours as $item) {
-//         $record = \App\Models\LivePerformanceDay::where('type', 'hourly')
-//             ->where('room_id', $item->room_id)
-//             ->where('date', $date)
-//             ->where('hour', $item->latest_hour)
-//             ->first();
-
-//         if ($record) {
-//             $snapshot->push($record);
-//         }
-//     }
-
-//     // Sắp xếp theo GMV giảm dần
-//     $snapshot = $snapshot->sortByDesc('gmv')->values();
-
-//     return view('live_performance.snap_hourly', [
-//         'snapshot' => $snapshot,
-//         'selectedDate' => $date,
-//     ]);
-// }
 public function snapshot(Request $request)
 {
     $date = $request->input('date', now()->toDateString());
@@ -119,33 +101,40 @@ public function snapshot(Request $request)
     // Lấy toàn bộ room có tồn tại trong hệ thống
     $rooms = \App\Models\Room::with('project')->get();
 
-   $data = $rooms->map(function ($room) use ($date) {
-    $latest = \App\Models\LivePerformanceDay::where('room_id', $room->id)
-        ->where('date', $date)
-        ->where('type', 'hourly')
-        ->orderByDesc('hour')
-        ->first();
+    $data = $rooms->map(function ($room) use ($date) {
+        $latest = \App\Models\LivePerformanceDay::where('room_id', $room->id)
+            ->where('date', $date)
+            ->where('type', 'hourly')
+            ->orderByDesc('hour')
+            ->first();
 
-    return (object)[ // 👈 chuyển array => object
-        'room' => $room,
-        'room_id' => $room->id,
-        'date' => $date,
-        'hour' => $latest?->hour,
-        'gmv' => $latest?->gmv ?? 0,
-        'ads_total_cost' => $latest?->ads_total_cost ?? 0,
-        'ads_manual_cost' => $latest?->ads_manual_cost ?? 0,
-        'ads_auto_cost' => $latest?->ads_auto_cost ?? 0,
-        'live_impressions' => $latest?->live_impressions ?? 0,
-        'views' => $latest?->views ?? 0,
-        'product_clicks' => $latest?->product_clicks ?? 0,
-        'items_sold' => $latest?->items_sold ?? 0,
-        'ctr' => $latest?->ctr ?? null,
-        'ctor' => $latest?->ctor ?? null,
-    ];
-});
+        $target = \App\Models\LiveTargetDay::where('room_id', $room->id)
+            ->where('date', $date)
+            ->first();
 
+        $gmv = $latest?->gmv ?? 0;
+        $gmvTarget = $target?->gmv_target ?? 0;
 
-    // Sắp xếp theo GMV giảm dần
+        return (object)[
+            'room' => $room,
+            'room_id' => $room->id,
+            'date' => $date,
+            'hour' => $latest?->hour,
+            'gmv' => $gmv,
+            'gmv_target' => $gmvTarget,
+            'percent_achieved' => ($gmvTarget > 0) ? round($gmv / $gmvTarget * 100, 2) : null,
+            'ads_total_cost' => $latest?->ads_total_cost ?? 0,
+            'ads_manual_cost' => $latest?->ads_manual_cost ?? 0,
+            'ads_auto_cost' => $latest?->ads_auto_cost ?? 0,
+            'live_impressions' => $latest?->live_impressions ?? 0,
+            'views' => $latest?->views ?? 0,
+            'product_clicks' => $latest?->product_clicks ?? 0,
+            'items_sold' => $latest?->items_sold ?? 0,
+            'ctr' => $latest?->ctr ?? null,
+            'ctor' => $latest?->ctor ?? null,
+        ];
+    });
+
     $data = $data->sortByDesc('gmv')->values();
 
     return view('live_performance.snap_hourly', [
@@ -162,10 +151,8 @@ public function snapshotDailyRange(Request $request)
     $projectId = $request->input('project_id');
     $roomId = $request->input('room_id');
 
-    // Lấy danh sách tất cả rooms (để render filter dropdown)
     $allRooms = \App\Models\Room::with('project')->get();
 
-    // Lọc danh sách room theo project/room nếu có
     $rooms = $allRooms->when($projectId, fn($q) => $q->where('project_id', $projectId))
                       ->when($roomId, fn($q) => $q->where('id', $roomId));
 
@@ -175,18 +162,28 @@ public function snapshotDailyRange(Request $request)
             ->where('type', 'daily')
             ->get();
 
+        $targets = \App\Models\LiveTargetDay::where('room_id', $room->id)
+            ->whereBetween('date', [$from, $to])
+            ->get();
+
         $gmv = $records->sum('gmv');
         $ads = $records->sum('ads_total_cost');
         $liveImpressions = $records->sum('live_impressions');
         $views = $records->sum('views');
         $clicks = $records->sum('product_clicks');
         $items = $records->sum('items_sold');
-
+        $gmvTarget = $targets->sum('gmv_target');
+        $dealCost = $records->sum('deal_cost');
+        $totalCost = $ads + $dealCost;
         return (object)[
             'room' => $room,
             'room_id' => $room->id,
             'gmv' => $gmv,
+            'gmv_target' => $gmvTarget,
+            'percent_achieved' => ($gmvTarget > 0) ? round($gmv / $gmvTarget * 100, 2) : null,
             'ads_total_cost' => $ads,
+            'deal_cost' => $dealCost,
+            'total_cost' => $totalCost,
             'live_impressions' => $liveImpressions,
             'views' => $views,
             'product_clicks' => $clicks,

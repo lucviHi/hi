@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container py-4">
-    <h2 class="mb-4">📊 Snapshot Daily: Tổng hợp từ <strong> {{ $from }} </strong> đến <strong> {{ $to }} </strong></h2>
+    <h3 class="mb-4">📊 Snapshot Daily: Tổng hợp từ <strong> {{ $from }} </strong> đến <strong> {{ $to }} </strong></h3>
 
     <form method="GET" class="row g-3 align-items-end mb-4">
         <div class="col-md-2">
@@ -46,7 +46,10 @@
 
     @php
         $totalGmv = $snapshot->sum('gmv');
+        $totalTarget = $snapshot->sum('gmv_target');
         $totalAds = $snapshot->sum('ads_total_cost');
+        $totalDeal = $snapshot->sum('deal_cost');
+        $totalCost = $snapshot->sum('total_cost');
         $totalImpressions = $snapshot->sum('live_impressions');
         $totalViews = $snapshot->sum('views');
         $totalClicks = $snapshot->sum('product_clicks');
@@ -55,6 +58,8 @@
         $totalEntryRate = $totalImpressions > 0 ? round($totalViews / $totalImpressions * 100, 2) : null;
         $totalCtr = $totalViews > 0 ? round($totalClicks / $totalViews * 100, 2) : null;
         $totalCtor = $totalClicks > 0 ? round($totalItems / $totalClicks * 100, 2) : null;
+        $totalPercentAchieved = $totalTarget > 0 ? round($totalGmv / $totalTarget * 100, 2) : null;
+
     @endphp
 
     <div class="table-responsive">
@@ -63,7 +68,12 @@
                 <tr>
                     <th>Phòng</th>
                     <th>GMV</th>
+                    <th>Mục tiêu</th>
+                    <th>% Đạt</th>
                     <th>Ads</th>
+                    <th>Deal</th>
+                    <th>Tổng chi phí</th>
+                    <th>% Tổng chi phí/ GMV</th>
                     <th>Live Impressions</th>
                     <th>Views</th>
                     <th>Clicks</th>
@@ -78,7 +88,12 @@
                     <tr>
                         <td class="text-start">{{ $row->room->name }}</td>
                         <td>{{ number_format($row->gmv) }}</td>
+                        <td>{{ number_format($row->gmv_target) }}</td>
+                        <td>{{ $row->percent_achieved !== null ? $row->percent_achieved . '%' : '-' }}</td>
                         <td>{{ number_format($row->ads_total_cost) }}</td>
+                        <td>{{ number_format($row->deal_cost) }}</td>
+                        <td>{{ number_format($row->total_cost) }}</td>
+                        <td>{{ $row->gmv > 0 ? round($row->total_cost *100/ $row->gmv, 2).'%' : '-' }}</td>
                         <td>{{ number_format($row->live_impressions) }}</td>
                         <td>{{ number_format($row->views) }}</td>
                         <td>{{ number_format($row->product_clicks) }}</td>
@@ -93,7 +108,12 @@
                 <tr class="table-secondary fw-bold">
                     <td>TỔNG</td>
                     <td>{{ number_format($totalGmv) }}</td>
+                    <td>{{ number_format($totalTarget) }}</td>
+                    <td>{{ $totalPercentAchieved !== null ? $totalPercentAchieved . '%' : '-' }}</td>
                     <td>{{ number_format($totalAds) }}</td>
+                    <td>{{ number_format($totalDeal) }}</td>
+                    <td>{{ number_format($totalCost) }}</td>
+                    <td>{{ $totalGmv > 0 ? round($totalCost*100 / $totalGmv, 2).'%' : '-' }}</td>
                     <td>{{ number_format($totalImpressions) }}</td>
                     <td>{{ number_format($totalViews) }}</td>
                     <td>{{ number_format($totalClicks) }}</td>
