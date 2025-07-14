@@ -108,11 +108,59 @@
     <h2 class="mb-4">📊 Snapshot tổng theo ngày của tất cả các kênh</h2>
 
     <!-- Bộ lọc ngày -->
-    <form method="GET" class="d-flex align-items-center gap-3 mb-4">
+    {{-- <form method="GET" class="d-flex align-items-center gap-3 mb-4">
         <label class="form-label mb-0">Chọn ngày:</label>
         <input type="date" name="date" class="form-control" value="{{ $selectedDate }}">
         <button class="btn btn-outline-primary">Lọc</button>
-    </form>
+    </form> --}}
+
+    <form method="GET" class="row g-3 align-items-end mb-4">
+    <div class="col-md-2">
+        <label class="form-label mb-0">Chọn ngày:</label>
+        <input type="date" name="date" class="form-control" value="{{ $selectedDate }}">
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">Dự án</label>
+        <select name="project_id" class="form-select">
+            <option value="">-- Tất cả --</option>
+            @foreach ($projects as $project)
+                <option value="{{ $project->id }}" {{ request('project_id') == $project->id ? 'selected' : '' }}>
+                    {{ $project->name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">Kênh</label>
+        <select name="room_id" class="form-select">
+            <option value="">-- Tất cả --</option>
+            @foreach ($rooms as $room)
+                <option value="{{ $room->id }}" {{ request('room_id') == $room->id ? 'selected' : '' }}>
+                    {{ $room->name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <div class="form-check mt-2">
+            <input type="checkbox" name="filter_hour_before_now" value="1"
+                   class="form-check-input"
+                   id="filterHourCheckbox"
+                   {{ request('filter_hour_before_now') ? 'checked' : '' }}>
+            <label class="form-check-label" for="filterHourCheckbox">
+                Hiện thị các kênh chưa import dữ liệu
+            </label>
+        </div>
+    </div>
+
+    <div class="col-md-1">
+        <button class="btn btn-outline-primary w-100">Lọc</button>
+    </div>
+</form>
+
 
     @php
         $totalGMV = 0;

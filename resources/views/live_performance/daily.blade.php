@@ -153,7 +153,7 @@
                     <td>Tổng</td>
                     <td>{{ number_format($totalGMV) }}</td>
                     <td>{{ number_format($total) }}</td>
-                    <td>{{ $totalGMV> 0 ? round($total/ $totalGMV, 2) . '%' : '-' }}</td>
+                    <td>{{ $totalGMV> 0 ? round($total *100/ $totalGMV, 2) . '%' : '-' }}</td>
                     <td>{{ number_format($totalDeal) }}</td>
                     <td></td>
                     <td>{{ number_format($totalCost) }}</td>
