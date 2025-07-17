@@ -122,6 +122,7 @@
                     <th>AOV sku</th>
                     <th>CTR</th>
                     <th>CTOR</th>
+                    <th>Xoá</th>
                 </tr>
             </thead>
             <tbody>
@@ -155,14 +156,56 @@
                         <td>{{ $data->items_sold > 0? number_format($data->gmv/ $data->items_sold) : '-' }}</td>
                         <td>{{ $data->views > 0 ? round($data->product_clicks/$data->views * 100, 2) . '%' : '-' }}</td>
                         <td>{{ $data->product_clicks > 0 ? round($data->items_sold/ $data->product_clicks * 100, 2) . '%' : '-' }}</td>
+                        <td>
+                            <form action="{{ route('live_performance_days.destroy', ['id' => $data->id]) }}" method="POST" onsubmit="return confirm('Bạn có chắc muốn xoá dòng dữ liệu giờ {{ $data->hour }}?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Xoá</button>
+                            </form>
+                        </td>
+
                     </tr>
                 @endforeach 
             </tbody>
         </table>
     </div>
+    <hr>
+  <form method="GET" class="d-flex align-items-center gap-3 mb-3">
+    <label class="form-label mb-0">Ngày A:</label>
+    <input type="date" name="date_a" class="form-control" value="{{ request('date_a', now()->toDateString()) }}">
+
+    <label class="form-label mb-0">Ngày B:</label>
+    <input type="date" name="date_b" class="form-control" value="{{ request('date_b', now()->subDay()->toDateString()) }}">
+
+    <label class="form-label mb-0">Chỉ số:</label>
+    <select name="metric" class="form-select">
+        @php
+            $metrics = [
+                'gmv' => 'GMV',
+                'ads_total_cost' => 'Chi phí quảng cáo',
+                'live_impressions' => 'Hiển thị',
+                'product_clicks' => 'Lượt click sản phẩm',
+                'items_sold' => 'Sản phẩm bán',
+                'entry_rate' => 'Tỷ lệ vào phòng',
+                'ctr' => 'CTR',
+                'ctor' => 'CTOR',
+            ];
+        @endphp
+        @foreach ($metrics as $key => $label)
+            <option value="{{ $key }}" {{ request('metric', 'gmv') === $key ? 'selected' : '' }}>{{ $label }}</option>
+        @endforeach
+    </select>
+
+    <button type="submit" class="btn btn-outline-primary">So sánh</button>
+</form>
+
+   <canvas id="gmvChart" height="100"></canvas>
 </div>
+
+
 @endsection
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const sharedHour = document.getElementById('shared-hour');
 
@@ -171,6 +214,97 @@
             form.querySelector('.form-hour').value = parseInt(sharedHour.value);
         });
     });
+
+    const allHours = {!! json_encode($allHours) !!};
+    const dataA = @json($dataA);
+    const dataB = @json($dataB);
+    const labelA = 'Ngày {{ $dateA }}';
+    const labelB = 'Ngày {{ $dateB }}';
+    const selectedMetric = '{{ $metric }}';
+    const metricLabels = {
+        gmv: 'GMV (₫)',
+        ads_total_cost: 'Chi phí quảng cáo (₫)',
+        live_impressions: 'Hiển thị',
+        product_clicks: 'Lượt click sản phẩm',
+        items_sold: 'Sản phẩm bán',
+        entry_rate: 'Tỷ lệ vào phòng (%)',
+        ctr: 'CTR (%)',
+        ctor: 'CTOR (%)',
+    };
+    const metricLabel = metricLabels[selectedMetric] ?? selectedMetric;
+
+    function fillData(hours, raw) {
+        return hours.map(h => raw[h] ?? 0);
+    }
+
+    new Chart(document.getElementById('gmvChart'), {
+        type: 'line',
+        data: {
+            labels: allHours,
+            datasets: [
+                {
+                    label: labelA + ' - ' + metricLabel,
+                    data: fillData(allHours, dataA),
+                    borderColor: 'blue',
+                    backgroundColor: 'rgba(0,0,255,0.08)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: labelB + ' - ' + metricLabel,
+                    data: fillData(allHours, dataB),
+                    borderColor: 'orange',
+                    backgroundColor: 'rgba(255,165,0,0.08)',
+                    fill: true,
+                    borderDash: [4, 4],
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function (context) {
+                            let value = context.raw;
+                            let label = context.dataset.label || '';
+                            // Định dạng đơn vị
+                            if (selectedMetric === 'gmv' || selectedMetric === 'ads_total_cost') {
+                                value = Number(value).toLocaleString('vi-VN') + '₫';
+                            } else if (['entry_rate', 'ctr', 'ctor'].includes(selectedMetric)) {
+                                value = value + '%';
+                            } else {
+                                value = Number(value).toLocaleString('vi-VN');
+                            }
+                            return label + ': ' + value;
+                        }
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: metricLabel }
+                },
+                x: {
+                    title: { display: true, text: 'Giờ' }
+                }
+            }
+        }
+    });
+
+
+
+
 </script>
 @endsection
 

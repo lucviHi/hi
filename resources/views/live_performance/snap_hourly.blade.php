@@ -222,8 +222,16 @@
                                 : '-' }}
                         </td>
                         <td>{{ number_format($item->ads_total_cost) }}</td>
-                        <td>{{ $item->ads_total_cost > 0 ? round($item->gmv / $item->ads_total_cost, 2) : '-' }}</td>
-                        <td>{{ $item->gmv > 0 ? round($item->ads_total_cost * 100 / $item->gmv, 2) . '%' : '-' }}</td>
+                        @php
+                            $roi = $item->ads_total_cost > 0 ? round($item->gmv / $item->ads_total_cost, 2) : null;
+                            $percentCost = $item->gmv > 0 ? round($item->ads_total_cost * 100 / $item->gmv, 2) : null;
+                        @endphp
+                        <td class="{{ $roi < 8 ? 'bg-danger-subtle text-danger fw-bold' :''}}">
+                            {{ $roi !== null ? $roi : '-' }}
+                        </td>
+                        <td class="{{ $percentCost > 10 ? 'bg-danger-subtle text-danger fw-bold' :''}}">
+                            {{ $percentCost !== null ? $percentCost . '%' : '-' }}
+                        </td>
                         <td>{{ number_format($item->live_impressions) }}</td>
                         <td>{{ number_format($item->views) }}</td>
                         <td>{{ number_format($item->product_clicks) }}</td>
@@ -248,8 +256,21 @@
                         {{ $totalTarget > 0 ? round($totalGMV / $totalTarget * 100, 2) . '%' : '-' }}
                     </td>
                     <td>{{ number_format($totalCost) }}</td>
-                    <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) : '-' }}</td>
-                    <td>{{ $totalGMV > 0 ? round($totalCost * 100 / $totalGMV, 2) . '%' : '-' }}</td>
+                    {{-- <td>{{ $totalCost > 0 ? round($totalGMV / $totalCost, 2) : '-' }}</td>
+                    <td>{{ $totalGMV > 0 ? round($totalCost * 100 / $totalGMV, 2) . '%' : '-' }}</td> --}}
+                    @php
+                      $totalRoi = $totalCost > 0 ? round($totalGMV / $totalCost, 2) : null;
+                      $totalPercentCost = $totalGMV > 0 ? round($totalCost * 100 / $totalGMV, 2) : null;
+                    @endphp
+
+                    <td class="{{ $totalRoi !== null && $totalRoi < 8 ? 'bg-danger-subtle text-danger fw-bold' : '' }}">
+                        {{ $totalRoi !== null ? $totalRoi : '-' }}
+                    </td>
+
+                    <td class="{{ $totalPercentCost !== null && $totalPercentCost > 10 ? 'bg-danger-subtle text-danger fw-bold' : '' }}">
+                        {{ $totalPercentCost !== null ? $totalPercentCost . '%' : '-' }}
+                    </td>
+
                     <td>{{ number_format($totalImpressions) }}</td>
                     <td>{{ number_format($totalViews) }}</td>
                     <td>{{ number_format($totalClicks) }}</td>

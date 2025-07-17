@@ -79,6 +79,7 @@
                     <th>Vào phòng</th>
                     <th>CTR</th>
                     <th>CTOR</th>
+                    <th>Xóa</th>
                 </tr>
             </thead>
             <tbody>
@@ -132,6 +133,13 @@
                         <td>{{ $data->live_impressions > 0? round($data->views/ $data->live_impressions*100, 2) . '%' : '-' }}</td>
                         <td>{{ $data->views > 0 ? round($data->product_clicks/$data->views * 100, 2) . '%' : '-' }}</td>
                         <td>{{ $data->product_clicks > 0 ? round($data->items_sold/ $data->product_clicks * 100, 2) . '%' : '-' }}</td>
+                        <td>
+                            <form action="{{ route('live_performance_days.destroy', ['id' => $data->id]) }}" method="POST" onsubmit="return confirm('Bạn có chắc muốn xoá dòng dữ liệu giờ {{ $data->hour }}?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Xoá</button>
+                            </form>
+                        </td>
                     </tr>
                     @php
                         $totalGMV += $data->gmv;

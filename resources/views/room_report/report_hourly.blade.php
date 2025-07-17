@@ -140,6 +140,7 @@
                         <th>Mục tiêu / giờ</th>
                         <th>% đạt</th>
                         <th>Chi Phí QC</th>
+                        <th>ROI khung giờ</th>
                         <th>% Chi Phí QC</th>
                         {{-- <th>Ads Thủ Công</th>
                         <th>Ads Tự Động</th> --}}
@@ -204,8 +205,12 @@
                             {{-- <td>{{ $row->gmv == 0 ? '0%' : round($row->ads_total_cost * 100 / $row->gmv, 2) . '%' }}</td>
                             --}}
                             @php
+                                $roi =  $row->ads_total_cost > 0 ? round($row->gmv / $row->ads_total_cost, 2) : 0;
                                 $costRate = $row->gmv > 0 ? round($row->ads_total_cost * 100 / $row->gmv, 2) : 0;
                             @endphp
+                            <td class="{{ $roi < 8 ? 'bg-danger-subtle text-danger fw-bold' : '' }}">
+                                {{ $roi }}
+                            </td>
                             <td class="{{ $costRate > 10 ? 'bg-danger-subtle text-danger fw-bold' : '' }}">
                                 {{ $costRate . '%' }}
                             </td>
@@ -239,18 +244,26 @@
                         <td id="col-total-team" colspan="3"></td>
                         <td>{{ number_format($differences->sum('gmv')) }}</td>
                         <td>{{ number_format($differences->count() * $targetPerHour) }}</td>
-                        <td>
-                            @php
+                           @php
                                 $diffCount = $differences->count();
                                 $percentAchieved = ($targetPerHour > 0 && $diffCount > 0)
                                     ? round($differences->sum('gmv') / ($diffCount * $targetPerHour) * 100, 2)
                                     : null;
                             @endphp
+                        <td class="{{ $percentAchieved < 100 ? 'bg-danger-subtle text-danger fw-bold' : 'bg-success text-white' }}">
                             {{ $percentAchieved !== null ? $percentAchieved . '%' : '-' }}
                         </td>
 
                         <td>{{ number_format($differences->sum('ads_total_cost')) }}</td>
-                        <td>{{ $differences->sum('gmv') == 0 ? '0%' : round($differences->sum('ads_total_cost') * 100 / $differences->sum('gmv'), 2) . '%' }}
+                        @php
+                            $roiTotal =$differences->sum('ads_total_cost')> 0 ? round($differences->sum('gmv')/ $differences->sum('ads_total_cost'), 2) : null;
+                            $percentCost = $differences->sum('gmv') > 0 ? round($differences->sum('ads_total_cost') * 100 / $differences->sum('gmv'), 2) : null;
+                        @endphp
+                        <td class="{{ $roiTotal < 8  ? 'bg-danger-subtle text-danger fw-bold' :''}}">
+                            {{ $roiTotal !== null ? $roiTotal : '-' }}
+                        </td>
+                        <td class="{{ $percentCost> 10 ? 'bg-danger-subtle text-danger fw-bold' :''}}">
+                            {{ $percentCost !== null ? $percentCost . '%' : '-' }}
                         </td>
                         {{-- <td>{{ number_format($differences->sum('ads_manual_cost')) }}</td>
                         <td>{{ number_format($differences->sum('ads_auto_cost')) }}</td> --}}

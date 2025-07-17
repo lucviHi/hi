@@ -105,6 +105,10 @@ Route::post('/live_target_days/generate/{room_id}', [LiveTargetDayController::cl
 Route::put('rooms/live_target_days/bulk-update/{room_id}', [LiveTargetDayController::class, 'bulkUpdate'])->name('live_target_days.bulk_update');
 
 Route::get('/staff/search', [StaffController::class, 'search'])->name('staff.search');
+
+Route::delete('/live-performance-days/{id}', [LivePerformanceDayController::class, 'destroy'])
+    ->name('live_performance_days.destroy');
+
 //    Route::get('/rooms/{room}/staff_roles', [StaffRoleController::class, 'index'])->name('staff_roles.index');
 //         Route::get('/rooms/{room}/staff_roles/create', [StaffRoleController::class, 'create'])->name('staff_roles.create');
 //         Route::post('/rooms/{room}/staff_roles', [StaffRoleController::class, 'store'])->name('staff_roles.store');

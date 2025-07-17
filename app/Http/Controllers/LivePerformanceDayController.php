@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\LivePerformanceDay;
+use App\Models\LivePerformanceSnap;
 use App\Models\LiveTargetDay;
 
 class LivePerformanceDayController extends Controller
@@ -56,7 +57,44 @@ class LivePerformanceDayController extends Controller
     
 
     // Hiển thị theo giờ
-    public function hourly(Request $request, $room_id)
+//     public function hourly(Request $request, $room_id)
+// {
+//     // Nếu là admin thì cho xem mọi phòng
+//     if (auth()->guard('admin')->check()) {
+//         /** @var \App\Models\Admin $admin */
+//         $admin = auth()->guard('admin')->user();
+//     } else {
+//         /** @var \App\Models\Staff $user */
+//         $user = auth('web')->user();
+
+//         $hasAccess = $user->staffRoles()->where('room_id', $room_id)->exists();
+//         if (!$hasAccess) {
+//             abort(403, 'Bạn không có quyền truy cập phòng này.');
+//         }
+//     }
+
+//     $date = $request->input('date', now()->toDateString());
+//     $hourFrom = $request->input('hour_from');
+//     $hourTo = $request->input('hour_to');
+
+//     $query = LivePerformanceDay::where('room_id', $room_id)
+//         ->where('type', 'hourly')
+//         ->where('date', $date);
+
+//     if (is_numeric($hourFrom)) {
+//         $query->where('hour', '>=', (int)$hourFrom);
+//     }
+
+//     if (is_numeric($hourTo)) {
+//         $query->where('hour', '<=', (int)$hourTo);
+//     }
+
+//     $hourlyData = $query->orderBy('hour')->get()->keyBy('hour');
+
+//     return view('live_performance.hourly', compact('hourlyData', 'room_id', 'date'));
+// }
+
+public function hourly(Request $request, $room_id) 
 {
     // Nếu là admin thì cho xem mọi phòng
     if (auth()->guard('admin')->check()) {
@@ -72,10 +110,17 @@ class LivePerformanceDayController extends Controller
         }
     }
 
-    $date = $request->input('date', now()->toDateString());
-    $hourFrom = $request->input('hour_from');
-    $hourTo = $request->input('hour_to');
+        $date = $request->input('date', now()->toDateString());
+        $hourFrom = $request->input('hour_from');
+        $hourTo = $request->input('hour_to');
 
+      // 2. Lấy ngày so sánh
+    $metric = $request->input('metric', 'gmv');
+    $dateA = $request->input('date_a', now()->toDateString());
+    $dateB = $request->input('date_b', \Carbon\Carbon::parse($dateA)->subDay()->toDateString());
+  
+
+    // 3. Dữ liệu bảng = theo ngày A
     $query = LivePerformanceDay::where('room_id', $room_id)
         ->where('type', 'hourly')
         ->where('date', $date);
@@ -83,66 +128,86 @@ class LivePerformanceDayController extends Controller
     if (is_numeric($hourFrom)) {
         $query->where('hour', '>=', (int)$hourFrom);
     }
-
     if (is_numeric($hourTo)) {
         $query->where('hour', '<=', (int)$hourTo);
     }
 
     $hourlyData = $query->orderBy('hour')->get()->keyBy('hour');
 
-    return view('live_performance.hourly', compact('hourlyData', 'room_id', 'date'));
+    // 4. Dữ liệu biểu đồ
+    // $dataA = LivePerformanceDay::where('room_id', $room_id)
+    //     ->where('type', 'hourly')
+    //     ->where('date', $dateA)
+    //     ->get()
+    //     ->groupBy(fn($item) => str_pad($item->hour, 2, '0', STR_PAD_LEFT) . ':00')
+    //     ->map(fn($group) => $group->sum('gmv') ?? 0);
+
+    // $dataB = LivePerformanceDay::where('room_id', $room_id)
+    //     ->where('type', 'hourly')
+    //     ->where('date', $dateB)
+    //     ->get()
+    //     ->groupBy(fn($item) => str_pad($item->hour, 2, '0', STR_PAD_LEFT) . ':00')
+    //     ->map(fn($group) => $group->sum('gmv') ?? 0);
+
+    $dataA = LivePerformanceDay::where('room_id', $room_id)
+    ->where('type', 'hourly')
+    ->where('date', $dateA)
+    ->get()
+    ->groupBy('hour')
+    ->mapWithKeys(function ($group, $hour) use ($metric) {
+        $value = match ($metric) {
+            'entry_rate' => $group->sum('live_impressions') > 0
+                ? round($group->sum('views') / $group->sum('live_impressions') * 100, 2)
+                : 0,
+            'ctr' => $group->sum('views') > 0
+                ? round($group->sum('product_clicks') / $group->sum('views') * 100, 2)
+                : 0,
+            'ctor' => $group->sum('product_clicks') > 0
+                ? round($group->sum('items_sold') / $group->sum('product_clicks') * 100, 2)
+                : 0,
+            default => $group->sum($metric) ?? 0,
+        };
+        return [str_pad($hour, 2, '0', STR_PAD_LEFT) . ':00' => $value];
+    });
+
+$dataB = LivePerformanceDay::where('room_id', $room_id)
+    ->where('type', 'hourly')
+    ->where('date', $dateB)
+    ->get()
+    ->groupBy('hour')
+    ->mapWithKeys(function ($group, $hour) use ($metric) {
+        $value = match ($metric) {
+            'entry_rate' => $group->sum('live_impressions') > 0
+                ? round($group->sum('views') / $group->sum('live_impressions') * 100, 2)
+                : 0,
+            'ctr' => $group->sum('views') > 0
+                ? round($group->sum('product_clicks') / $group->sum('views') * 100, 2)
+                : 0,
+            'ctor' => $group->sum('product_clicks') > 0
+                ? round($group->sum('items_sold') / $group->sum('product_clicks') * 100, 2)
+                : 0,
+            default => $group->sum($metric) ?? 0,
+        };
+        return [str_pad($hour, 2, '0', STR_PAD_LEFT) . ':00' => $value];
+    });
+
+
+    // 5. Khung giờ
+    $allHours = collect(range(0, 23))->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00');
+
+    return view('live_performance.hourly', compact(
+        'room_id',
+        'date',
+        'dateA',
+        'dateB',
+        'hourlyData',
+        'allHours',
+        'metric',
+        'dataA',
+        'dataB'
+    ));
 }
 
-// public function snapshot(Request $request)
-// {
-//     $date = $request->input('date', now()->toDateString());
-//     $currentHour = now()->timezone('Asia/Ho_Chi_Minh')->hour;
-
-//     // Lấy toàn bộ room có tồn tại trong hệ thống
-//     $rooms = \App\Models\Room::with('project')->get();
-
-//     $data = $rooms->map(function ($room) use ($date) {
-//         $latest = \App\Models\LivePerformanceDay::where('room_id', $room->id)
-//             ->where('date', $date)
-//             ->where('type', 'hourly')
-//             ->orderByDesc('hour')
-//             ->first();
-
-//         $target = \App\Models\LiveTargetDay::where('room_id', $room->id)
-//             ->where('date', $date)
-//             ->first();
-
-//         $gmv = $latest?->gmv ?? 0;
-//         $gmvTarget = $target?->gmv_target ?? 0;
-
-//         return (object)[
-//             'room' => $room,
-//             'room_id' => $room->id,
-//             'date' => $date,
-//             'hour' => $latest?->hour,
-//             'gmv' => $gmv,
-//             'gmv_target' => $gmvTarget,
-//             'percent_achieved' => ($gmvTarget > 0) ? round($gmv / $gmvTarget * 100, 2) : null,
-//             'ads_total_cost' => $latest?->ads_total_cost ?? 0,
-//             'ads_manual_cost' => $latest?->ads_manual_cost ?? 0,
-//             'ads_auto_cost' => $latest?->ads_auto_cost ?? 0,
-//             'live_impressions' => $latest?->live_impressions ?? 0,
-//             'views' => $latest?->views ?? 0,
-//             'product_clicks' => $latest?->product_clicks ?? 0,
-//             'items_sold' => $latest?->items_sold ?? 0,
-//             'ctr' => $latest?->ctr ?? null,
-//             'ctor' => $latest?->ctor ?? null,
-//         ];
-//     });
-
-//     $data = $data->sortByDesc('gmv')->values();
-
-//     return view('live_performance.snap_hourly', [
-//         'snapshot' => $data,
-//         'selectedDate' => $date,
-//         'currentHour' => $currentHour,
-//     ]);
-// }
 public function snapshot(Request $request) 
 {
     $date = $request->input('date', now()->toDateString());
@@ -274,5 +339,29 @@ public function snapshotDailyRange(Request $request)
         'selectedRoom' => $roomId,
     ]);
 }
+public function destroy($id)
+{
+    $record = LivePerformanceDay::findOrFail($id);
+
+    $roomId = $record->room_id;
+    $date   = $record->date;
+    $hour   = $record->hour;
+    $type   = $record->type;
+
+    // Xoá snapshot tương ứng
+    LivePerformanceSnap::where([
+        'room_id' => $roomId,
+        'date'    => $date,
+        'type'    => $type,
+    ])
+    ->when(!is_null($hour), fn($q) => $q->where('hour', $hour))
+    ->delete();
+
+    // Xoá bản ghi tổng
+    $record->delete();
+
+    return back()->with('success', "Đã xoá bản ghi [$type] - ngày $date " . ($hour !== null ? "giờ $hour" : "") . " và snapshot liên quan.");
+}
+
 
 }

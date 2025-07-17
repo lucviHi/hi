@@ -109,7 +109,7 @@ public function show($room_id)
     //     ? Room::findOrFail($room_id)
     //     : auth()->guard('web')->user()->rooms()->where('rooms.id', $room_id)->firstOrFail();
 
-  $today = now()->toDateString();
+$today = now()->toDateString();
 $yesterday = now()->subDay()->toDateString();
 $startOfMonth = now()->startOfMonth()->toDateString();
 $endOfMonth = now()->endOfMonth()->toDateString();

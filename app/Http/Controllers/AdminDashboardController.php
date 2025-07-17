@@ -50,7 +50,12 @@ class AdminDashboardController extends Controller
             ->groupBy('room_id')
             ->map(fn($items) => $items->sortByDesc('hour')->first());
 
-        $yesterdayRevenue = $latestYesterdayData->sum('gmv');
+        // $yesterdayRevenue = $latestYesterdayData->sum('gmv');
+        $yesterdayRevenue = LivePerformanceDay::whereIn('room_id', $roomIds)
+        ->whereDate('date', $yesterday)
+        ->where('type', 'daily')
+        ->sum('gmv');
+
 
         $monthRevenue = LivePerformanceDay::whereIn('room_id', $roomIds)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
@@ -205,20 +210,22 @@ $costByRoomToday = Room::query()
     ->when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
     ->get()
     ->map(function ($room) use ($today) {
-        $gmv = LivePerformanceDay::where('room_id', $room->id)
+        $latestToday = LivePerformanceDay::where('room_id', $room->id)
             ->whereDate('date', $today)
             ->where('type', 'hourly')
-            ->sum('gmv');
+            ->orderByDesc('hour') // Nếu không có cột 'hour', dùng 'created_at'
+            ->first();
 
-        $cost = LivePerformanceDay::where('room_id', $room->id)
-            ->whereDate('date', $today)
-            ->where('type', 'hourly')
-            ->sum('ads_total_cost');
-
-        $percent = $gmv > 0 ? round(($cost / $gmv) * 100, 2) : 0;
-
-        return ['room' => $room->name, 'cost_percent' => $percent];
-    })->sortByDesc('cost_percent')->values();
+        $todayRevenue = (int) ($latestToday?->gmv ?? 0);
+        $todayCost = (int) ($latestToday?->ads_total_cost ?? 0);
+        $todayCostPercent = $todayRevenue > 0 ? round(($todayCost / $todayRevenue) * 100, 2) : 0;
+        return [
+            'room' => $room->name,
+            'cost_percent' => $todayCostPercent,
+        ];
+    })
+    ->sortByDesc('cost_percent')
+    ->values();
 
 $costByRoomMonth = Room::query()
     ->when($selectedProjectId, fn($q) => $q->where('project_id', $selectedProjectId))
@@ -243,35 +250,34 @@ $costByRoomMonth = Room::query()
 
 // 5. Kênh có chi phí ads > 8%
 $overspendRoomsToday = Room::with('project')->get()->filter(function ($room) use ($today) {
-    $gmv = LivePerformanceDay::where('room_id', $room->id)
+    $latest = LivePerformanceDay::where('room_id', $room->id)
         ->whereDate('date', $today)
         ->where('type', 'hourly')
-        ->sum('gmv');
-        
-    $cost = LivePerformanceDay::where('room_id', $room->id)
-        ->whereDate('date', $today)
-        ->where('type', 'hourly')
-        ->sum('ads_total_cost');
+        ->orderByDesc('hour') // dùng 'created_at' nếu không có 'hour'
+        ->first();
+
+    $gmv = (int) ($latest?->gmv ?? 0);
+    $cost = (int) ($latest?->ads_total_cost ?? 0);
 
     return $gmv > 0 && ($cost / $gmv) * 100 > 8;
 })->map(function ($room) use ($today) {
-    $gmv = LivePerformanceDay::where('room_id', $room->id)
+    $latest = LivePerformanceDay::where('room_id', $room->id)
         ->whereDate('date', $today)
         ->where('type', 'hourly')
-        ->sum('gmv');
+        ->orderByDesc('hour') // hoặc 'created_at'
+        ->first();
 
-    $cost = LivePerformanceDay::where('room_id', $room->id)
-        ->whereDate('date', $today)
-        ->where('type', 'hourly')
-        ->sum('ads_total_cost');
+    $gmv = (int) ($latest?->gmv ?? 0);
+    $cost = (int) ($latest?->ads_total_cost ?? 0);
 
     return [
         'room' => $room->name,
         'project' => optional($room->project)->name,
-        'cost_percent' => round(($cost / $gmv) * 100, 2),
+        'cost_percent' => $gmv > 0 ? round(($cost / $gmv) * 100, 2) : 0,
     ];
-});
-
+})
+ ->sortByDesc('cost_percent') 
+ ->values(); 
 
 $overspendRoomsMonth = Room::with('project')->get()->filter(function ($room) use ($startOfMonth, $endOfMonth) {
     $gmv = LivePerformanceDay::where('room_id', $room->id)
@@ -301,7 +307,9 @@ $overspendRoomsMonth = Room::with('project')->get()->filter(function ($room) use
         'project' => optional($room->project)->name,
         'cost_percent' => round(($cost / $gmv) * 100, 2),
     ];
-});
+})
+ ->sortByDesc('cost_percent') 
+ ->values(); 
 
 
        return view('admin.dashboard', compact(
